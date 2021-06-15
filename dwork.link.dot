@@ -1,0 +1,40 @@
+# http://www.graphviz.org/content/cluster
+
+digraph G {
+ 
+  bgcolor=transparent;
+
+  subgraph cluster_0 {
+    label = "dwork.link contracts";
+
+    style=filled;
+    color=lightgrey;
+    node [style=filled,color=pink];
+    fontsize = 20;
+    
+    
+    WorkSpaceFactory ->  WorkSpace [arrowhead = dot]
+    WorkSpace -> Manager [arrowhead = dot]
+    Manager -> Client [arrowhead = dot]
+    Manager -> Worker [arrowhead = dot]
+    Worker -> Job [arrowhead = dot]
+    Client -> Job  [arrowhead = diamond]
+    Job -> Manager   [arrowhead = diamond]
+    Job -> Dividends   [arrowhead = diamond]
+    Job -> Worker   [arrowhead = diamond]
+    
+
+
+    WorkSpaceCredit -> CrowdSale [arrowhead = box]
+
+    CrowdSale -> Holders [arrowhead = box]
+    Dividends -> Holders [arrowhead = diamond]
+    Dividends -> Holders [arrowhead = box]
+    Holders -> Dividends [arrowhead = box]
+    WorkSpaceCredit -> ExternalSwapContract [arrowhead = box]
+    ExternalSwapContract -> Holders [arrowhead = box]
+    Holders -> ExternalSwapContract [arrowhead = box]
+  }
+
+ 
+}
