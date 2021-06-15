@@ -1,4 +1,3 @@
-const { stripZeros } = require("@ethersproject/bytes");
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
@@ -38,7 +37,7 @@ async function setUp() {
   const DLink = await ethers.getContractFactory("DLink");
   const dLink = await DLink.deploy();
   const dlink = await dLink.deployed();
-  const [owner] = await ethers.getSigners();
+  const [owner, client, worker] = await ethers.getSigners();
 
   return {
     workspacefactory,
@@ -46,6 +45,8 @@ async function setUp() {
     jobmaster: job,
     dlink,
     owner,
+    client,
+    worker,
   };
 }
 
@@ -174,7 +175,9 @@ describe("contract tests", async function () {
       workspacemaster,
       jobmaster
     );
-    let workspaceaddress = workspacefactory.getContractAddress(owner.address);
+    let workspaceaddress = await workspacefactory.getContractAddress(
+      owner.address
+    );
     const workspace = await ethers.getContractAt(
       "WorkSpace",
       workspaceaddress,
@@ -360,6 +363,158 @@ describe("contract tests", async function () {
     expect(workerRegisterFailedAgain2).to.be.true;
   });
 
+  it("test workspace fees", async function () {
+    const { workspacefactory, workspacemaster, jobmaster, owner } =
+      await setUp();
+    await addLibrariesAndWorkspace(
+      workspacefactory,
+      workspacemaster,
+      jobmaster
+    );
+    let workspaceaddress = await workspacefactory.getContractAddress(
+      owner.address
+    );
+    const workspace = await ethers.getContractAt(
+      "WorkSpace",
+      workspaceaddress,
+      owner
+    );
 
-  
+    let fee = await workspace.fee();
+
+    expect(fee).to.equal(1);
+
+    await workspace.setFee(8);
+
+    expect(await workspace.fee()).to.equal(8);
+  });
+
+  it("test moderation", async function () {
+    const { workspacefactory, workspacemaster, jobmaster, owner } =
+      await setUp();
+    await addLibrariesAndWorkspace(
+      workspacefactory,
+      workspacemaster,
+      jobmaster
+    );
+    let workspaceaddress = await workspacefactory.getContractAddress(
+      owner.address
+    );
+    const workspace = await ethers.getContractAt(
+      "WorkSpace",
+      workspaceaddress,
+      owner
+    );
+    await workspace.setRegistrationOpen(true);
+
+    let mockContractHash = await ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes("test hash")
+    );
+    await workspace.noInvites();
+    await workspace.registerClient(
+      "metadataurl",
+      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
+      "",
+      mockContractHash
+    );
+    await workspace.registerWorker(
+      "metadataurl",
+      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
+      "",
+      mockContractHash
+    );
+    const WORKER_ROLE = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes("WORKER_ROLE")
+    );
+    const CLIENT_ROLE = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes("CLIENT_ROLE")
+    );
+    await workspace.moderateTarget(
+      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
+      WORKER_ROLE,
+      true
+    );
+    let disabledWorker = await workspace.workers(
+      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
+    );
+    expect(disabledWorker.disabled).to.be.true;
+
+    await workspace.moderateTarget(
+      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
+      CLIENT_ROLE,
+      true
+    );
+    let disabledClient = await workspace.clients(
+      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"
+    );
+    expect(disabledClient.disabled).to.be.true;
+    // now I just set them back
+    await workspace.moderateTarget(
+      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
+      WORKER_ROLE,
+      false
+    );
+    let disabledWorker2 = await workspace.workers(
+      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
+    );
+    expect(disabledWorker2.disabled).to.be.false;
+  });
+
+  it("Test Job library in workspace", async function () {
+    const { workspacefactory, workspacemaster, jobmaster, owner } =
+      await setUp();
+    await addLibrariesAndWorkspace(
+      workspacefactory,
+      workspacemaster,
+      jobmaster
+    );
+    let workspaceaddress = await workspacefactory.getContractAddress(
+      owner.address
+    );
+    const workspace = await ethers.getContractAt(
+      "WorkSpace",
+      workspaceaddress,
+      owner
+    );
+
+    expect(await workspace.getJobLibraryAddress()).to.equal(jobmaster.address);
+    // set the job library to a new random address, to test changing it
+
+    await workspace.setJobLibraryAddress(
+      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
+    );
+
+    expect(await workspace.getJobLibraryAddress()).to.equal(
+      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
+    );
+    // I set it back
+    await workspace.setJobLibraryAddress(jobmaster.address);
+  });
+
+  it("test dlink contract", async function () {
+  const {dlink,client } =
+      await setUp();
+   const addrArrays = ["0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02","0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"];
+   await dlink.connect(client).link(addrArrays);
+   const links = await dlink.connect(client).getLinks();
+   expect(links).to.have.same.members(addrArrays);
+   await dlink.connect(client).link([]);
+   const linksAgain = await dlink.connect(client).getLinks();
+   expect(linksAgain.length).to.equal(0);
+   const counter = await dlink.connect(client).getCounter();
+   expect(counter).to.equal(2);
+   const historyLinks = await dlink.connect(client).getHistory(1);
+   expect(historyLinks).to.have.same.members(addrArrays);
+    
+   let failed = false;
+    try{
+      await dlink.connect(client).getHistory(0);
+    } catch(err){
+      failed = true;
+    }
+    expect(failed).to.be.true;
+  });
+
+  it("test client creating a job", async function () {});
+  it("test disabled clients trying to create a job", async function () {});
 });
