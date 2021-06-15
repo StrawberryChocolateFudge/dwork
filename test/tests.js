@@ -492,29 +492,80 @@ describe("contract tests", async function () {
   });
 
   it("test dlink contract", async function () {
-  const {dlink,client } =
-      await setUp();
-   const addrArrays = ["0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02","0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"];
-   await dlink.connect(client).link(addrArrays);
-   const links = await dlink.connect(client).getLinks();
-   expect(links).to.have.same.members(addrArrays);
-   await dlink.connect(client).link([]);
-   const linksAgain = await dlink.connect(client).getLinks();
-   expect(linksAgain.length).to.equal(0);
-   const counter = await dlink.connect(client).getCounter();
-   expect(counter).to.equal(2);
-   const historyLinks = await dlink.connect(client).getHistory(1);
-   expect(historyLinks).to.have.same.members(addrArrays);
-    
-   let failed = false;
-    try{
+    const { dlink, client } = await setUp();
+    const addrArrays = [
+      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
+      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
+    ];
+    await dlink.connect(client).link(addrArrays);
+    const links = await dlink.connect(client).getLinks();
+    expect(links).to.have.same.members(addrArrays);
+    await dlink.connect(client).link([]);
+    const linksAgain = await dlink.connect(client).getLinks();
+    expect(linksAgain.length).to.equal(0);
+    const counter = await dlink.connect(client).getCounter();
+    expect(counter).to.equal(2);
+    const historyLinks = await dlink.connect(client).getHistory(1);
+    expect(historyLinks).to.have.same.members(addrArrays);
+
+    let failed = false;
+    try {
       await dlink.connect(client).getHistory(0);
-    } catch(err){
+    } catch (err) {
       failed = true;
     }
     expect(failed).to.be.true;
   });
 
-  it("test client creating a job", async function () {});
-  it("test disabled clients trying to create a job", async function () {});
+  it("test client creating a job", async function () {
+    const { workspacefactory, workspacemaster, jobmaster, owner, client } =
+      await setUp();
+    await addLibrariesAndWorkspace(
+      workspacefactory,
+      workspacemaster,
+      jobmaster
+    );
+    let workspaceaddress = await workspacefactory.getContractAddress(
+      owner.address
+    );
+    const workspace = await ethers.getContractAt(
+      "WorkSpace",
+      workspaceaddress,
+      owner
+    );
+    await workspace.setRegistrationOpen(true);
+
+    let mockContractHash = await ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes("test hash")
+    );
+    await workspace.noInvites();
+    // The manager signs up the client here
+    await workspace.registerClient(
+      "metadataurl",
+      client.address,
+      "",
+      mockContractHash
+    );
+
+    const clientObj = await workspace.clients(client.address);
+    expect(clientObj.initialized).to.be.true;
+
+    // I disable the client and creating a job should throw
+    const CLIENT_ROLE = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes("CLIENT_ROLE")
+    );
+    await workspace.moderateTarget(client.address, CLIENT_ROLE, true);
+    let thrwError = false;
+    try {
+          await workspace.connect(client).createJob();
+
+    } catch(err){
+      thrwError = true;
+    }
+    expect(thrwError).to.be.true;
+    await workspace.moderateTarget(client.address, CLIENT_ROLE, false);
+    await workspace.connect(client).createJob();
+    const clientJobs = await workspace.jobs(client.address);
+    expect(clientJobs.length).to.equal(1);
+  });
 });
