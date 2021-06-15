@@ -44,15 +44,8 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
 
 
     function createJob() external onlyRole(RoleLib.CLIENT_ROLE) {
-                emit CreateJobCalled(true, "before required");
-
         require(state.clients[msg.sender].initialized == true, "The client must be initialized");
-                emit CreateJobCalled(true, "after client check");
-
         require(state.clients[msg.sender].disabled == false, "Disabled clients cannot create jobs");//TODO: TEST 
-        
-        emit CreateJobCalled(true, "called and goes all the way");
-
         Job job = Job(createClone(state.jobLibraryAddress));
         job.initialize(state.factoryAddress,address(this),msg.sender);
         state.jobs[msg.sender].push(job);
@@ -99,7 +92,6 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
         
         require(state.registrationOpen,"Registration is not open");
         require(state.clients[msg.sender].initialized == false,"The client already signed up"); 
-        //TODO: test trying to register twice
         state.registerClient(
             _metadataUrl,
             clientAddress, 
