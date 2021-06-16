@@ -10,7 +10,8 @@ import "./CloneFactory.sol";
 // The workspace factory is used to create and track WorkSpaces
 contract WorkSpaceFactory is AccessControl, CloneFactory {
     using WorkSpaceFactoryLib for FactoryState;
-    FactoryState state;
+    FactoryState private state;
+    mapping(address => bool) private createLocks;
 
     event WorkSpaceCreated(
         address creator,
@@ -18,40 +19,71 @@ contract WorkSpaceFactory is AccessControl, CloneFactory {
         string metadata
     );
 
+    event CreateWorkSpaceFailed(
+        address sender
+    );
+
+    event FallbackTriggered(
+        address sender
+    );
+
+
     constructor(address _owner) {
         require(_owner != address(0), "500");
         state.owner = _owner;
         _setupRole(RoleLib.ADMIN_ROLE, state.owner);
         state.disabled = false;
         state.contractFee = 0;
+        state.jobLibraryVersion = 0;
+        state.workSpaceLibraryVersion = 0;
     }
 
     function createWorkSpace(uint8 _fee, string memory _metadata)
         public
         returns (address)
     {
-        // each address can create a single workspace with this contract
+        //if upgrade is available, allow the creation of multiple workspaces
+        //The creator wil laslo pass if this is the first workspace he created
+        require(state.checkIfWorkSpaceIsOutdated(msg.sender),"502");
+
+
         require(!state.disabled, "501");
+        // Locking the create so a user can only create one at a time, no reentrancy
+        require(createLocks[msg.sender] == false, "503");
+        createLocks[msg.sender] = true;
+        uint256 index;
 
-        require(state.addressIsNew(msg.sender), "502");
+        WorkSpace workSpace = WorkSpace(createClone(state.workSpaceLibraryAddress));
 
+        try workSpace.initialize(
+                _fee,
+                _metadata,
+                msg.sender,
+                state.jobLibraryAddress,
+                state.workSpaceLibraryVersion,
+                state.jobLibraryVersion
+            ){
+            state.currentIndex[msg.sender] += 1;
+            index = state.currentIndex[msg.sender];
+            state.workSpaces[msg.sender][index] = address(workSpace);
 
-        WorkSpace workSpace =
-            WorkSpace(createClone(state.workSpaceLibraryAddress));
+            state.amountOfWorkSpaces++;
+            emit WorkSpaceCreated(
+                msg.sender,
+                state.workSpaces[msg.sender][index],
+                _metadata
+            );
+        } catch {
+            // I will release the lock if that call fails
+            emit CreateWorkSpaceFailed(msg.sender);
+            createLocks[msg.sender] = false;
+        }
 
+        createLocks[msg.sender] = false;
 
-        workSpace.initialize(_fee, _metadata, msg.sender,state.jobLibraryAddress);
-
-        state.workSpaces[msg.sender] = address(workSpace);
-
-        emit WorkSpaceCreated(
-            msg.sender,
-            state.workSpaces[msg.sender],
-            _metadata
-        );
-        state.amountOfWorkSpaces++;
-        return state.workSpaces[msg.sender];
+        return state.workSpaces[msg.sender][index];
     }
+
 
     function setContractFee(int8 _newFee)
         external
@@ -62,6 +94,22 @@ contract WorkSpaceFactory is AccessControl, CloneFactory {
 
     function setDisabled(bool _disabled) external onlyRole(RoleLib.ADMIN_ROLE) {
         state.disabled = _disabled;
+    }
+
+    function setWorkSpaceLibrary(address _address)
+        external
+        onlyRole(RoleLib.ADMIN_ROLE)
+        returns (address)
+    {
+        return state.setWorkSpaceLibrary(_address);
+    }
+
+    function setJobLibraryAddress(address _address)
+        external
+        onlyRole(RoleLib.ADMIN_ROLE)
+        returns (address)
+    {
+        return state.setJobLibraryAddress(_address);
     }
 
     function addressIsNew(address _address) external view returns (bool) {
@@ -87,27 +135,39 @@ contract WorkSpaceFactory is AccessControl, CloneFactory {
     function getOwner() external view returns (address) {
         return state.getOwner();
     }
-    
 
     function getWorkSpaceLibrary() external view returns (address) {
         return state.workSpaceLibraryAddress;
     }
 
-    function setWorkSpaceLibrary(address _address) external returns (address) {
-        return state.setWorkSpaceLibrary(_address);
-    }
-
-    function setJobLibraryAddress(address _address) external returns (address){
-        return state.setJobLibraryAddress(_address);
-    }
-    function getJobLibraryAddress() external view returns (address){
+    function getJobLibraryAddress() external view returns (address) {
         return state.jobLibraryAddress;
     }
 
-    function amIAFactory() external pure returns (bool){
-        // This is used so the workspace clone can call back to the creator address 
+    function amIAFactory() external pure returns (bool) {
+        // This is used so the workspace clone can call back to the creator address
         // to ask if it's real during initialization!
         // To avoid a random address just calling the init
         return true;
+    }
+
+    function getCurrentWorkspaceIndex(address _manager)
+        external
+        view
+        returns (uint256)
+    {
+        return state.currentIndex[_manager];
+    }
+
+    function getHistoricWorkspace(uint256 idx, address _manager)
+        external
+        view
+        returns (address)
+    {
+        return state.workSpaces[_manager][idx];
+    }
+
+    fallback() external {
+        emit FallbackTriggered(msg.sender);
     }
 }

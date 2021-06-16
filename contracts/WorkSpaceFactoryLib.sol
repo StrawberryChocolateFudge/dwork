@@ -2,15 +2,20 @@
 pragma solidity 0.8.5;
 
 import "./WorkSpace.sol";
-
+import "hardhat/console.sol";
 struct FactoryState {
     address owner;
-    mapping(address => address) workSpaces;
+    mapping(address => mapping(uint => address)) workSpaces;
+    mapping(address => uint) currentIndex;
+
     uint256 amountOfWorkSpaces;
     uint8 contractFee;
     bool disabled;
     address workSpaceLibraryAddress;
     address jobLibraryAddress;
+    string metadataUrl;
+    uint jobLibraryVersion;
+    uint workSpaceLibraryVersion;
 }
 
 library WorkSpaceFactoryLib {
@@ -25,7 +30,8 @@ library WorkSpaceFactoryLib {
         view
         returns (address)
     {
-        return self.workSpaces[_key];
+        uint index = self.currentIndex[_key];
+        return self.workSpaces[_key][index];
     }
 
     function addressIsNew(FactoryState storage self, address _address)
@@ -34,8 +40,10 @@ library WorkSpaceFactoryLib {
         returns (bool)
     {
         // If this is true, that means the wallet is not added to the workSpaces ,yet.
+        uint index = self.currentIndex[_address];
+
         return
-            self.workSpaces[_address] ==
+            self.workSpaces[_address][index] ==
             address(0x0000000000000000000000000000000000000000);
     }
 
@@ -59,12 +67,40 @@ library WorkSpaceFactoryLib {
         external
         returns (address)
     {
-        self.workSpaceLibraryAddress = _address;
+        if(self.workSpaceLibraryAddress !=  _address){
+            self.workSpaceLibraryVersion += 1;
+
+            self.workSpaceLibraryAddress = _address;
+
+        }
+
         return self.workSpaceLibraryAddress;
     }
 
     function setJobLibraryAddress(FactoryState storage self,address _address) external returns (address){   
-        self.jobLibraryAddress = _address;
+        
+        if(self.jobLibraryAddress != _address){
+            self.jobLibraryAddress = _address;
+            self.jobLibraryVersion += 1;
+        }
+
         return self.jobLibraryAddress;
+    }
+
+    function checkIfWorkSpaceIsOutdated(FactoryState storage self,address _manager ) external view returns (bool){
+        uint current = self.currentIndex[_manager];
+        if(current == 0){
+            return true;
+        }
+        WorkSpace workspace__ = WorkSpace(self.workSpaces[_manager][current]);
+        (uint workSpaceVersion, uint JobVersion) = workspace__.getVersions();
+        if(self.jobLibraryVersion > JobVersion){
+            return true;
+        }
+        if(self.workSpaceLibraryVersion > workSpaceVersion){
+            return true;
+        }
+
+        return false;
     }
 }
