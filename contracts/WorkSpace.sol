@@ -8,9 +8,9 @@ import "./WorkSpaceLib.sol";
 import "./CloneFactory.sol";
 import "./Initializer.sol";
 import "./WorkSpaceFactory.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 
-
-contract WorkSpace is AccessControl, CloneFactory,Initializable{
+contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
     event RegistrationSuccess(bytes32 role, address registeredAddress);
 
     //TODO: ADD events to tests!!
@@ -85,7 +85,7 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
     //      }  
 
 
-    //  }
+     //}
     function registerWorker(
         string calldata _metadataUrl,
         address workerAddress,
@@ -193,7 +193,7 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
 
     function addInviteToken(string calldata inviteToken)
         external
-        onlyRole(RoleLib.MANAGER_ROLE)
+       onlyRole(RoleLib.MANAGER_ROLE)
     {
         state.addInviteToken(inviteToken);
     }

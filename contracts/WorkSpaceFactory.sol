@@ -2,13 +2,14 @@
 pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./WorkSpace.sol";
 import "./RoleLib.sol";
 import "./WorkSpaceFactoryLib.sol";
 import "./CloneFactory.sol";
 
 // The workspace factory is used to create and track WorkSpaces
-contract WorkSpaceFactory is AccessControl, CloneFactory {
+contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
     using WorkSpaceFactoryLib for FactoryState;
     FactoryState private state;
     mapping(address => bool) private createLocks;
@@ -74,7 +75,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory {
                 _metadata
             );
         } catch {
-            // I will release the lock if that call fails
+            // I will release the lock if that call fails and returns a revert, in case it doesn't continue
             emit CreateWorkSpaceFailed(msg.sender);
             createLocks[msg.sender] = false;
         }

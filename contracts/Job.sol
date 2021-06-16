@@ -8,11 +8,11 @@ import "./WorkSpaceFactory.sol";
 import "./RoleLib.sol";
 import "./JobLib.sol";
 import "./Initializer.sol";
-
+import "@openzeppelin/contracts/utils/Multicall.sol";
 // The job contains the description of the job and works as a refundable escrow.
 // The payment is either refounded or split
 
-contract Job is AccessControl, Initializable {
+contract Job is AccessControl, Initializable,Multicall {
     event Received(address,uint);
 
     using JobLib for JobState;

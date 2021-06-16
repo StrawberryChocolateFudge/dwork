@@ -40,6 +40,4 @@ contract DLink{
        bytes32 historyAccess = keccak256(abi.encodePacked(msg.sender,indx));
        return workLink[historyAccess];
    }
-
-
 }
