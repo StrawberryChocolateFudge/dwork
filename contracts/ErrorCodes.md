@@ -23,3 +23,4 @@ Errors
 516 : The client cannot become a manager.
 517 : Registration is not open
 518 : The client already signed up
+519 : Function is in use, try again
