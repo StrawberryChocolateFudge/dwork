@@ -2,6 +2,8 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 async function setUp() {
+    const [owner, client, worker, factoryBoss] = await ethers.getSigners();
+
   const WorkSpaceFactoryLib = await ethers.getContractFactory(
     "WorkSpaceFactoryLib"
   );
@@ -18,7 +20,7 @@ async function setUp() {
     libraries: { WorkSpaceFactoryLib: workspacefactorylib.address },
   });
   const workSpaceFactory = await WorkSpaceFactory.deploy(
-    "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"
+    factoryBoss.address
   );
   const workspacefactory = await workSpaceFactory.deployed();
 
@@ -37,7 +39,6 @@ async function setUp() {
   const DLink = await ethers.getContractFactory("DLink");
   const dLink = await DLink.deploy();
   const dlink = await dLink.deployed();
-  const [owner, client, worker] = await ethers.getSigners();
 
   return {
     workspacefactory,
@@ -47,13 +48,16 @@ async function setUp() {
     owner,
     client,
     worker,
+    factoryBoss
   };
 }
 
-async function addLibrariesAndWorkspace(workspacefactory, workspace, job) {
-  await workspacefactory.setWorkSpaceLibrary(workspace.address);
-  await workspacefactory.setJobLibraryAddress(job.address);
-  await workspacefactory.createWorkSpace(1, "This is the metadata");
+async function addLibrariesAndWorkspace(workspacefactory, workspace, job,factoryBoss) {
+  await workspacefactory.connect(factoryBoss).setWorkSpaceLibrary(workspace.address).then(async () =>{
+    await workspacefactory.connect(factoryBoss).setJobLibraryAddress(job.address).then(async () =>{
+      await workspacefactory.createWorkSpace(1, "This is the metadata");
+    });
+  });
 }
 
 describe("contract tests", async function () {
@@ -89,14 +93,14 @@ describe("contract tests", async function () {
   });
 
   it("test create workspace", async function () {
-    const { workspacefactory, workspacemaster, jobmaster } = await setUp();
-    await workspacefactory.setWorkSpaceLibrary(workspacemaster.address);
+    const { workspacefactory, workspacemaster, jobmaster,factoryBoss } = await setUp();
+    await workspacefactory.connect(factoryBoss).setWorkSpaceLibrary(workspacemaster.address);
 
     expect(await workspacefactory.getWorkSpaceLibrary()).to.equal(
       workspacemaster.address
     );
 
-    await workspacefactory.setJobLibraryAddress(jobmaster.address);
+    await workspacefactory.connect(factoryBoss).setJobLibraryAddress(jobmaster.address);
     expect(await workspacefactory.getJobLibraryAddress()).to.equal(
       jobmaster.address
     );
@@ -118,13 +122,13 @@ describe("contract tests", async function () {
   });
 
   it("Test contract fees", async function () {
-    const { workspacefactory } = await setUp();
+    const { workspacefactory,factoryBoss } = await setUp();
     let initialContractFee = await workspacefactory.getContractFee();
     expect(initialContractFee).to.be.equal(0);
 
     let ownerAddress = await workspacefactory.getOwner();
     expect(ownerAddress).to.be.equal(
-      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"
+      factoryBoss.address
     );
 
     let cantsetDisabled = false;
@@ -145,12 +149,13 @@ describe("contract tests", async function () {
   });
 
   it("Test workspace metadata", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner } =
+    const { workspacefactory, workspacemaster, jobmaster, owner,factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster
+      jobmaster,
+      factoryBoss
     );
     let workspaceaddress = workspacefactory.getContractAddress(owner.address);
     const workspace = await ethers.getContractAt(
@@ -168,12 +173,13 @@ describe("contract tests", async function () {
   });
 
   it("Test disabling registration", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner } =
+    const { workspacefactory, workspacemaster, jobmaster, owner,factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster
+      jobmaster,
+      factoryBoss
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -192,12 +198,13 @@ describe("contract tests", async function () {
   });
 
   it("test written contracts", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner } =
+    const { workspacefactory, workspacemaster, jobmaster, owner,factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster
+      jobmaster,
+      factoryBoss
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -231,12 +238,13 @@ describe("contract tests", async function () {
   });
 
   it("test roles and registration", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner } =
+    const { workspacefactory, workspacemaster, jobmaster, owner,factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster
+      jobmaster,
+      factoryBoss
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -364,12 +372,13 @@ describe("contract tests", async function () {
   });
 
   it("test workspace fees", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner } =
+    const { workspacefactory, workspacemaster, jobmaster, owner,factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster
+      jobmaster,
+      factoryBoss
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -390,12 +399,13 @@ describe("contract tests", async function () {
   });
 
   it("test moderation", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner } =
+    const { workspacefactory, workspacemaster, jobmaster, owner,factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster
+      jobmaster,
+      factoryBoss
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -461,12 +471,13 @@ describe("contract tests", async function () {
   });
 
   it("Test Job library in workspace", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner } =
+    const { workspacefactory, workspacemaster, jobmaster, owner,factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster
+      jobmaster,
+      factoryBoss
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -479,16 +490,6 @@ describe("contract tests", async function () {
 
     expect(await workspace.getJobLibraryAddress()).to.equal(jobmaster.address);
     // set the job library to a new random address, to test changing it
-
-    await workspace.setJobLibraryAddress(
-      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
-    );
-
-    expect(await workspace.getJobLibraryAddress()).to.equal(
-      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
-    );
-    // I set it back
-    await workspace.setJobLibraryAddress(jobmaster.address);
   });
 
   it("test dlink contract", async function () {
@@ -518,12 +519,13 @@ describe("contract tests", async function () {
   });
 
   it("test client creating a job", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner, client } =
+    const { workspacefactory, workspacemaster, jobmaster, owner, client,factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster
+      jobmaster,
+      factoryBoss
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -565,7 +567,60 @@ describe("contract tests", async function () {
     expect(thrwError).to.be.true;
     await workspace.moderateTarget(client.address, CLIENT_ROLE, false);
     await workspace.connect(client).createJob();
-    const clientJobs = await workspace.jobs(client.address);
+    const clientJobs = await workspace.clientjobs(client.address);
     expect(clientJobs.length).to.equal(1);
   });
+
+
+  it("test deprecated workspace checking",async function(){
+    // I will create 2 workspaces and then check which one is deprecated from the order
+    // This is useful if the users saved a dlink to a workspace, but the workspace got updated
+    const { workspacefactory, workspacemaster, jobmaster, owner, client,factoryBoss} =
+      await setUp();
+    await addLibrariesAndWorkspace(
+      workspacefactory,
+      workspacemaster,
+      jobmaster,
+      factoryBoss
+    );
+    let workspaceaddressOne = await workspacefactory.getContractAddress(
+      owner.address
+    );
+
+
+    let createFailed = false;
+    try{
+      await workspacefactory.createWorkSpace(1,"this is the metadata");
+    } catch(err){
+      createFailed = true;
+    }
+    // This create should fail because the libraries have not been updated
+    expect(createFailed).to.be.true;
+    // I set the job to a new address, just to increase the index, this is not a valid Job contract
+    await workspacefactory.connect(factoryBoss).setJobLibraryAddress(factoryBoss.address);
+    //this is just to increment that index
+    // I set it back to a valid one so the workspace can be created
+    await workspacefactory.connect(factoryBoss).setJobLibraryAddress(jobmaster.address);
+    
+    //Create one more, this time it should succeed
+    await workspacefactory.createWorkSpace(1,"this is the metadata");
+
+    let workspaceaddressTwo = await workspacefactory.getContractAddress(owner.address);
+
+    expect(workspaceaddressOne).to.not.equal(workspaceaddressTwo);
+
+
+    // from the clients and workers point of view, if they saved the workspace address
+    // and it changes, they must get a warning on the front end about deprecation!
+    // so I must have a way to check in JS
+    const workspaceOne = await ethers.getContractAt("WorkSpace",workspaceaddressOne,client);
+    const managerAddress = await workspaceOne.getManagerAddress();
+    const currentIndex =  await workspacefactory.getCurrentWorkspaceIndex(managerAddress);
+    const currentWorkspace = await workspacefactory.getHistoricWorkspace(currentIndex,managerAddress);
+    // and voila we get the current workspace, if its not the same as address one, the address one is deprecated!
+    expect(currentWorkspace).to.not.equal(workspaceaddressOne);
+    expect(currentWorkspace).to.equal(workspaceaddressTwo);
+  
+  
+  })
 });

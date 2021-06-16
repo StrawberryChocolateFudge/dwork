@@ -9,47 +9,78 @@ import "./RoleLib.sol";
 import "./JobLib.sol";
 import "./Initializer.sol";
 
-// The job contains the description of the job and works as a refundable escrow. 
-// The payment is either refounded or split 
+// The job contains the description of the job and works as a refundable escrow.
+// The payment is either refounded or split
 
-contract Job is AccessControl, Initializable{
-    
+contract Job is AccessControl, Initializable {
     using JobLib for JobState;
     JobState state;
-    
-    function initialize (
+
+    function initialize(
         address _factoryAddress,
         address _workSpaceAddress,
         address _clientAddress
-    ) external initializer(){
-        state.factoryAddress = _factoryAddress;
-        WorkSpace workSpc = WorkSpace(msg.sender);
-        // This calls the workspace to avoid initialization vulnerability in the master contract
-        // only a workspace can init this
-        bool isReal = workSpc.amIWorkSpace(); 
-
-        require(isReal,"The initializer is not a workspace");
-
+    ) external initializer() {
         state.workspaceAddress = _workSpaceAddress;
         state.clientAddress = _clientAddress;
         state.created = block.timestamp;
         state.disabled = false;
         state.round = 0;
+        WorkSpace workSpc = WorkSpace(msg.sender);
+        // This calls the workspace to avoid initialization vulnerability in the master contract
+        // only a workspace can init this
+
+        bool isReal;
+        try workSpc.amIWorkSpace() returns (bool result) {
+            isReal = result;
+        } catch {
+            isReal = false;
+        }
+
+        require(isReal, "The initializer is not a workspace");
+        state.factoryAddress = _factoryAddress;
+
+        address _managerAddress = workSpc.getManagerAddress();
         _setupRole(RoleLib.CLIENT_ROLE, _clientAddress);
+        _setupRole(RoleLib.MANAGER_ROLE, _managerAddress);
+        _setupRole(RoleLib.WORKSPACE, msg.sender);
     }
-    
-    
+
     function createAssignment(
         address[] memory assignees_,
         uint256[] memory shares_,
-        string memory metadataUrl_) external payable {
-        //  TODO/: TEST:azzs
-        
-        state.createAssignment(assignees_,shares_, msg.value, metadataUrl_);
+        string memory metadataUrl_
+    ) external payable {
+        //  TODO/: TEST:
+
+        state.createAssignment(assignees_, shares_, msg.value, metadataUrl_);
     }
 
+    // fallback function for payments
+    // function zs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    //TODO: this contract must call the workspace often for evaluating if the workers or clients are disabled or not
+
     //function fundJob() external payable onlyRole(CLIENT_ROLE) {
-        // This should be used to fund the job, if the job is not reusable, this should throw after calling it once
+    // This should be used to fund the job, if the job is not reusable, this should throw after calling it once
     //}
 
     //TODO: most interactions with this contract should be throught the workspace

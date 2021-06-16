@@ -21,13 +21,11 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
         uint8 _fee,
         string memory _metadataUrl,
         address _manager,
-        address _jobLibraryAddress
+        address _jobLibraryAddress,
+        uint workSpaceVersion,
+        uint jobVersion
     ) external initializer() {
-        // initializer PROTECTION!
-        // lets call the factory with the msg.sender address!
-        WorkSpaceFactory factory = WorkSpaceFactory(msg.sender);
-        bool isReal = factory.amIAFactory();
-        require(isReal,"Caller is not the factory!");
+        
         // the manager must deploy his own contract to match Jobs
         require(_manager != address(0), "_manager is the zero address");
         require(_jobLibraryAddress != address(0), "_jobLibraryAddress is the zero address");
@@ -35,21 +33,46 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
         state.fee = _fee;
         state.metadataUrl = _metadataUrl;
         state.managerAddress = payable(_manager);
-        _setupRole(RoleLib.MANAGER_ROLE, _manager);
         state.requireInvite = true;
         state.factoryAddress = msg.sender;
-        
         state.jobLibraryAddress = _jobLibraryAddress;
+        state.workSpaceVersion = workSpaceVersion;
+        state.jobVersion = jobVersion;
+
+        _setupRole(RoleLib.MANAGER_ROLE, _manager);
+        // initializer PROTECTION!
+        // lets call the factory with the msg.sender address!
+        WorkSpaceFactory factory = WorkSpaceFactory(msg.sender);
+        bool isReal = factory.amIAFactory();
+        require(isReal,"Caller is not the factory!");
     }
 
 
     function createJob() external onlyRole(RoleLib.CLIENT_ROLE) {
         require(state.clients[msg.sender].initialized == true, "The client must be initialized");
         require(state.clients[msg.sender].disabled == false, "Disabled clients cannot create jobs");//TODO: TEST 
+        //TODO: LOCK!
+        
         Job job = Job(createClone(state.jobLibraryAddress));
         job.initialize(state.factoryAddress,address(this),msg.sender);
-        state.jobs[msg.sender].push(job);
+        state.clientjobs[msg.sender].push(job);
     }
+
+     
+     function AssignWorkers(address to, address[] calldata workerAddresses,uint[] calldata shares,string calldata _metadataUrl) external {
+         //TODO: test THIS!
+         bool isManager = hasRole(RoleLib.MANAGER_ROLE, msg.sender);
+         bool isClient = hasRole(RoleLib.CLIENT_ROLE,msg.sender);
+         require(isManager || isClient,"Sender must be manager or client");
+         require(workerAddresses.length == shares.length,"The address and share array must match!");
+         
+         for(uint i = 0;i < workerAddresses.length;i++){
+          Job job = Job(to);
+          //require that the worker address exists
+          //job.createAssignment(a,zs shares_,_metadataUrl);
+          // add the worker to the worker jobs
+         }
+     }
 
     // TODO: Assign workers to jobs through the workspace!
 
@@ -169,9 +192,6 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
         state.noInvites();
     }
 
-    function setJobLibraryAddress(address _address) external onlyRole(RoleLib.MANAGER_ROLE){
-        state.setJobLibraryAddress(_address);
-    }
     function setRegistrationOpen(bool isOpen) external onlyRole(RoleLib.MANAGER_ROLE) {
         state.setRegistrationOpen(isOpen);
     }
@@ -213,8 +233,11 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
         return state.workers[_address];
     }
 
-    function jobs(address _address) external view returns (Job[] memory){
-        return state.jobs[_address];
+    function clientjobs(address _address) external view returns (Job[] memory){
+        return state.clientjobs[_address];
+    }
+    function workerjobs(address _address) external view returns (Job[] memory){
+        return state.workerjobs[_address];
     }
 
     function getRegistrationOpen() external view returns (bool){
@@ -227,5 +250,9 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable{
     function amIWorkSpace() external pure returns (bool){
         // This is used by the job to call back and ask the sender if he is this contract
         return true;
+    }
+
+    function getVersions() external view returns (uint,uint){
+        return (state.workSpaceVersion,state.jobVersion);
     }
 }

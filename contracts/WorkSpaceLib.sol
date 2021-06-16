@@ -27,8 +27,13 @@ struct WorkSpaceState {
     address factoryAddress;
     mapping(address => Worker) workers;
     mapping(address => Client) clients;
-    mapping(address => Job[]) jobs; // jobs are mapped to the clients address
+    mapping(address => Job[]) clientjobs; // jobs are mapped to the clients address
+    //TODO: WORKERJOBS!, TODO: rename above to clientJob!
+    mapping(address => Job[]) workerjobs;
+
     address jobLibraryAddress;
+    uint workSpaceVersion;
+    uint jobVersion;
     //TODO: Managers cannot see workers and clients so easily without knowing the address
     
 }
@@ -193,10 +198,6 @@ library WorkSpaceLib {
 
     function noInvites(WorkSpaceState storage self) external {
         self.requireInvite = false;
-    }
-
-    function setJobLibraryAddress(WorkSpaceState storage self,address _jobLibraryAddress) external {
-        self.jobLibraryAddress = _jobLibraryAddress;
     }
 
     function checkInviteTokenValidity(
