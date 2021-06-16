@@ -13,6 +13,8 @@ import "./Initializer.sol";
 // The payment is either refounded or split
 
 contract Job is AccessControl, Initializable {
+    event Received(address,uint);
+
     using JobLib for JobState;
     JobState state;
 
@@ -26,6 +28,8 @@ contract Job is AccessControl, Initializable {
         state.created = block.timestamp;
         state.disabled = false;
         state.round = 0;
+        state.factoryAddress = _factoryAddress;
+
         WorkSpace workSpc = WorkSpace(msg.sender);
         // This calls the workspace to avoid initialization vulnerability in the master contract
         // only a workspace can init this
@@ -38,7 +42,6 @@ contract Job is AccessControl, Initializable {
         }
 
         require(isReal, "The initializer is not a workspace");
-        state.factoryAddress = _factoryAddress;
 
         address _managerAddress = workSpc.getManagerAddress();
         _setupRole(RoleLib.CLIENT_ROLE, _clientAddress);
@@ -49,15 +52,23 @@ contract Job is AccessControl, Initializable {
     function createAssignment(
         address[] memory assignees_,
         uint256[] memory shares_,
+                uint256 reward_,
+
         string memory metadataUrl_
-    ) external payable {
+    ) external {
         //  TODO/: TEST:
 
-        state.createAssignment(assignees_, shares_, msg.value, metadataUrl_);
+         state.createAssignment(assignees_, shares_,reward_, metadataUrl_);
     }
 
-    // fallback function for payments
-    // function zs
+    //TODO: test recieving ether
+    receive() external payable{
+       emit Received(msg.sender,msg.value);
+    }
+
+    fallback() external payable{
+      emit Received(msg.sender,msg.value);  
+    }
 
 
 
