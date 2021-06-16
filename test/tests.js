@@ -29,7 +29,7 @@ async function setUp() {
   });
   const workSpace = await WorkSpace.deploy();
   const workspace = await workSpace.deployed();
-
+ 
   const Job = await ethers.getContractFactory("Job", {
     libraries: { JobLib: joblib.address },
   });
@@ -254,8 +254,9 @@ describe("contract tests", async function () {
       workspaceaddress,
       owner
     );
-    await workspace.setRegistrationOpen(true);
 
+    await workspace.setRegistrationOpen(true);
+    
     let myRole = await workspace.whoAmI();
     expect(myRole).to.equal("manager");
     let mockContractHash = await ethers.utils.keccak256(
@@ -295,8 +296,7 @@ describe("contract tests", async function () {
     // Now I set the token hash so I can register with an address
 
     await workspace.addInviteToken("Hazx123sZ");
-
-    await workspace.registerClient(
+   await workspace.registerClient(
       "metadataurl",
       "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
       "Hazx123sZ",
@@ -355,6 +355,7 @@ describe("contract tests", async function () {
     } catch (error) {
       workerRegisterFailedAgain = true;
     }
+    //THIS SUCCEEEDS
     expect(workerRegisterFailedAgain).to.be.false;
     // I try to register twice
     let workerRegisterFailedAgain2 = false;
@@ -369,6 +370,14 @@ describe("contract tests", async function () {
       workerRegisterFailedAgain2 = true;
     }
     expect(workerRegisterFailedAgain2).to.be.true;
+
+    let addresses = await  workspace.getAddresses();
+    expect(addresses.length).to.equal(2);
+    let workerAddresses = addresses[0];
+    let clientAddresses = addresses[1];
+    
+    expect(workerAddresses[0]).to.equal("0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02")
+    expect(clientAddresses[0]).to.equal("0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0");
   });
 
   it("test workspace fees", async function () {
