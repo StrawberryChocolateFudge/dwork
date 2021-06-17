@@ -44,7 +44,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         returns (address)
     {
         //if upgrade is available, allow the creation of multiple workspaces
-        //The creator wil laslo pass if this is the first workspace he created
+        //The creator will aslo pass if this is the first workspace he created
         require(state.checkIfWorkSpaceIsOutdated(msg.sender),"502");
 
 
@@ -149,13 +149,6 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
 
     function getJobLibraryAddress() external view returns (address) {
         return state.jobLibraryAddress;
-    }
-
-    function amIAFactory() external pure returns (bool) {
-        // This is used so the workspace clone can call back to the creator address
-        // to ask if it's real during initialization!
-        // To avoid a random address just calling the init
-        return true;
     }
 
     function getCurrentWorkspaceIndex(address _manager)

@@ -256,11 +256,6 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
         return state.managerAddress;
     }
 
-    function amIWorkSpace() external pure returns (bool) {
-        // This is used by the job to call back and ask the sender if he is this contract
-        return true;
-    }
-
     function getVersions() external view returns (uint256, uint256) {
         return (state.workSpaceVersion, state.jobVersion);
     }
