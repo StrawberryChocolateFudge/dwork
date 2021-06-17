@@ -9,6 +9,8 @@ import "./RoleLib.sol";
 import "./JobLib.sol";
 import "./Initializer.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
+import "./FactoryContractVerifier.sol";
+
 // The job contains the description of the job and works as a refundable escrow.
 // The payment is either refounded or split
 
@@ -18,47 +20,49 @@ contract Job is AccessControl, Initializable,Multicall {
     using JobLib for JobState;
     JobState state;
 
+    
+    using FactoryContractVerifier for FactoryContractVerifierState;
+    FactoryContractVerifierState verifier;
+
     function initialize(
-        address _factoryAddress,
         address _workSpaceAddress,
         address _clientAddress
     ) external initializer() {
+        // maybe I cannot have a check for the bytecode because the caller is a clone!
+        // in that case, I have to call jobs through the factory!
+        require(verifier.checkFactoryBytecode(msg.sender),"The caller is not a workspace");
+        
         state.workspaceAddress = _workSpaceAddress;
         state.clientAddress = _clientAddress;
         state.created = block.timestamp;
         state.disabled = false;
         state.round = 0;
-        state.factoryAddress = _factoryAddress;
+        state.factoryAddress = msg.sender;
 
-        WorkSpace workSpc = WorkSpace(msg.sender);
-        // This calls the workspace to avoid initialization vulnerability in the master contract
-        // only a workspace can init this
-
-        bool isReal;
-        try workSpc.amIWorkSpace() returns (bool result) {
-            isReal = result;
-        } catch {
-            isReal = false;
-        }
-
-        require(isReal, "The initializer is not a workspace");
-
+        WorkSpace workSpc = WorkSpace(_workSpaceAddress);
         address _managerAddress = workSpc.getManagerAddress();
         _setupRole(RoleLib.CLIENT_ROLE, _clientAddress);
         _setupRole(RoleLib.MANAGER_ROLE, _managerAddress);
-        _setupRole(RoleLib.WORKSPACE, msg.sender);
+        _setupRole(RoleLib.WORKSPACE, _workSpaceAddress);
     }
 
-    function createAssignment(
-        address[] memory assignees_,
-        uint256[] memory shares_,
-                uint256 reward_,
+    function addAssignees(address[] calldata workerAddresses) external{
+       //state.hereIAm();
+    }
 
-        string memory metadataUrl_
-    ) external {
-        //  TODO/: TEST:
 
-         state.createAssignment(assignees_, shares_,reward_, metadataUrl_);
+    // function createAssignment(    
+    //     address[] memory assignees_,
+    //     uint256[] memory shares_,
+    //     string memory metadataUrl_
+    // ) external {
+    //     //  TODO/: TEST:
+    //     //Locks!
+    //     //  state.createAssignment(assignees_, shares_, metadataUrl_);
+    // }
+
+    function getClient() external view returns(address){
+        return state.clientAddress;
     }
 
     //TODO: test recieving ether
