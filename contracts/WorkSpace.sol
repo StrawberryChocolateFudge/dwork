@@ -9,97 +9,91 @@ import "./CloneFactory.sol";
 import "./Initializer.sol";
 import "./WorkSpaceFactory.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
+import "./FactoryContractVerifier.sol";
+import "hardhat/console.sol";
 
-contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
+contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
     event RegistrationSuccess(bytes32 role, address registeredAddress);
-    event Moderated(address,bytes32,bool);
-
-    //TODO: ADD events to tests!!
+    event Moderated(address, bytes32, bool);
     event JobCreated();
     event FallbackTriggered(address);
+    event Assigned(address to, address[] workers, uint256[] shares);
     using WorkSpaceLib for WorkSpaceState;
     WorkSpaceState state;
 
+    using FactoryContractVerifier for FactoryContractVerifierState;
+    FactoryContractVerifierState verifier;
 
     function initialize(
         uint8 _fee,
         string memory _metadataUrl,
         address _manager,
         address _jobLibraryAddress,
-        uint workSpaceVersion,
-        uint jobVersion
+        uint256 workSpaceVersion,
+        uint256 jobVersion
     ) external initializer() {
-        require(_manager != address(0), "504");
-        require(_jobLibraryAddress != address(0), "505");
-        state.fee = _fee;
-        state.metadataUrl = _metadataUrl;
-        state.managerAddress = payable(_manager);
-        state.requireInvite = true;
-        state.factoryAddress = msg.sender;
-        state.jobLibraryAddress = _jobLibraryAddress;
-        state.workSpaceVersion = workSpaceVersion;
-        state.jobVersion = jobVersion;
+        require(verifier.checkFactoryBytecode(msg.sender), "506");
 
+        state.setStateForInit(
+            _fee,
+            _metadataUrl,
+            _manager,
+            _jobLibraryAddress,
+            workSpaceVersion,
+            jobVersion,
+            msg.sender
+        );
         _setupRole(RoleLib.MANAGER_ROLE, _manager);
-        // lets call the factory with the msg.sender address, an Abi call to avoid getting called by a non factory
-        WorkSpaceFactory factory = WorkSpaceFactory(msg.sender);
-        bool isReal = factory.amIAFactory();
-        require(isReal,"506");
     }
-
 
     function createJob() external onlyRole(RoleLib.CLIENT_ROLE) {
         require(state.clients[msg.sender].initialized == true, "507");
         require(state.clients[msg.sender].disabled == false, "508");
-        require(state.lock[msg.sender] == false,"519");
-        state.lock[msg.sender] = true;
-        
-        Job job = Job(payable(createClone(state.jobLibraryAddress)));
 
-        try job.initialize(state.factoryAddress,address(this),msg.sender){
+        WorkSpaceFactory factory = WorkSpaceFactory(state.factoryAddress);
+        Job job = Job(payable(factory.createJob(msg.sender)));
         state.clientjobs[msg.sender].push(job);
         emit JobCreated();
-        } catch {
-            state.lock[msg.sender] = false;
-
-        }
-
-        state.lock[msg.sender] = false;
-
     }
 
-     
-    // function assignWorkers(address to, address[] calldata workerAddresses,uint[] calldata shares,string calldata _metadataUrl) external {
-    //      //TODO: test THIS!
-    //      bool isManager = hasRole(RoleLib.MANAGER_ROLE, msg.sender);
-    //      bool isClient = hasRole(RoleLib.CLIENT_ROLE,msg.sender);
-    //      require(isManager || isClient,"509");
-    //      require(workerAddresses.length == shares.length,"510");
-    //      //TODO: Lock!
+    function addWorkers(address to, address[] calldata workerAddresses)
+        external
+    {
+        require(
+            hasRole(RoleLib.MANAGER_ROLE, msg.sender) ||
+                hasRole(RoleLib.CLIENT_ROLE, msg.sender),
+            "509"
+        );
 
+        if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
+            state.assignWorkers(
+                to,
+                workerAddresses,
+                RoleLib.CLIENT_ROLE,
+                msg.sender
+            );
+        } else {
+            state.assignWorkers(
+                to,
+                workerAddresses,
+                RoleLib.MANAGER_ROLE,
+                msg.sender
+            );
+        }
+    }
 
-    //      for(uint i = 0;i < workerAddresses.length;i++){
-    //       Job job = Job(payable(to));
-    //       //require that the worker address exists
-    //       //job.createAssignment(a,zs shares_,_metadataUrl);
-    //       // add the worker to the worker jobs
-    //      }  
-
-
-     //}
     function registerWorker(
         string calldata _metadataUrl,
         address workerAddress,
         string calldata inviteToken,
         bytes32 _writtenContractHash
     ) external returns (Worker memory) {
-        require(workerAddress != address(0), "511");
-        require(hasRole(RoleLib.MANAGER_ROLE,workerAddress) == false,"512");
-        if (state.managerAddress != msg.sender){
-           require(workerAddress == msg.sender);
-        } 
-        require(state.registrationOpen,"513");
-        require(state.workers[msg.sender].initialized == false,"514");
+        require(hasRole(RoleLib.MANAGER_ROLE, workerAddress) == false, "512");
+        if (state.managerAddress != msg.sender) {
+            require(workerAddress == msg.sender);
+        }
+        require(state.registrationOpen, "513");
+        require(state.workers[msg.sender].initialized == false, "514");
 
         state.registerWorker(
             _metadataUrl,
@@ -117,18 +111,17 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
         string calldata inviteToken,
         bytes32 _writtenContractHash
     ) external returns (Client memory) {
-        require(clientAddress != address(0), "515");
-        require(hasRole(RoleLib.MANAGER_ROLE,clientAddress) == false,"516");
-        if (state.managerAddress != msg.sender){
+        require(hasRole(RoleLib.MANAGER_ROLE, clientAddress) == false, "516");
+        if (state.managerAddress != msg.sender) {
             // If it's not the manager sending this transaction then the address has to be the sender
             // It's because a manager can sign up other people.
-          require(clientAddress == msg.sender);
-        } 
-        require(state.registrationOpen,"517");
-        require(state.clients[msg.sender].initialized == false,"518"); 
+            require(clientAddress == msg.sender);
+        }
+        require(state.registrationOpen, "517");
+        require(state.clients[msg.sender].initialized == false, "518");
         state.registerClient(
             _metadataUrl,
-            clientAddress, 
+            clientAddress,
             inviteToken,
             _writtenContractHash
         );
@@ -155,7 +148,7 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
         state.setMetadata(_metadataUrl);
     }
 
-    
+    //TODO: move to library
     function whoAmI() external view returns (string memory) {
         if (hasRole(RoleLib.MANAGER_ROLE, msg.sender)) {
             return "manager";
@@ -168,15 +161,12 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
         }
     }
 
-    function addWrittenContract(
-        bytes32 contractHash,
-        string memory contractUrl)
+    function addWrittenContract(bytes32 contractHash, string memory contractUrl)
         external
         onlyRole(RoleLib.MANAGER_ROLE)
     {
-        state.addWrittenContract(contractHash,contractUrl);
+        state.addWrittenContract(contractHash, contractUrl);
     }
-
 
     function setCurrentWorkerContractHash(bytes32 newHash)
         external
@@ -194,7 +184,7 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
 
     function addInviteToken(string calldata inviteToken)
         external
-       onlyRole(RoleLib.MANAGER_ROLE)
+        onlyRole(RoleLib.MANAGER_ROLE)
     {
         state.addInviteToken(inviteToken);
     }
@@ -203,16 +193,22 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
         state.noInvites();
     }
 
-    function setRegistrationOpen(bool isOpen) external onlyRole(RoleLib.MANAGER_ROLE) {
+    function setRegistrationOpen(bool isOpen)
+        external
+        onlyRole(RoleLib.MANAGER_ROLE)
+    {
         state.setRegistrationOpen(isOpen);
     }
-    function getWrittenContract(bytes32 contractHash) external view
+
+    function getWrittenContract(bytes32 contractHash)
+        external
+        view
         returns (string memory)
     {
         return state.writtenContractUrls[contractHash];
     }
 
-    function getJobLibraryAddress() external view returns (address){
+    function getJobLibraryAddress() external view returns (address) {
         return state.jobLibraryAddress;
     }
 
@@ -244,30 +240,36 @@ contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
         return state.workers[_address];
     }
 
-    function clientjobs(address _address) external view returns (Job[] memory){
+    function clientjobs(address _address) external view returns (Job[] memory) {
         return state.clientjobs[_address];
     }
-    function workerjobs(address _address) external view returns (Job[] memory){
+
+    function workerjobs(address _address) external view returns (Job[] memory) {
         return state.workerjobs[_address];
     }
 
-    function getRegistrationOpen() external view returns (bool){
+    function getRegistrationOpen() external view returns (bool) {
         return state.registrationOpen;
     }
-    function getManagerAddress() external view returns (address){
+
+    function getManagerAddress() external view returns (address) {
         return state.managerAddress;
     }
 
-    function amIWorkSpace() external pure returns (bool){
+    function amIWorkSpace() external pure returns (bool) {
         // This is used by the job to call back and ask the sender if he is this contract
         return true;
     }
 
-    function getVersions() external view returns (uint,uint){
-        return (state.workSpaceVersion,state.jobVersion);
+    function getVersions() external view returns (uint256, uint256) {
+        return (state.workSpaceVersion, state.jobVersion);
     }
 
-    function getAddresses() external view returns (address[] memory,address[] memory){
+    function getAddresses()
+        external
+        view
+        returns (address[] memory, address[] memory)
+    {
         return state.getAddresses();
     }
 
