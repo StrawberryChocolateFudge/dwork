@@ -16,6 +16,14 @@ async function setUp() {
   const jobLib = await JobLib.deploy();
   const joblib = await jobLib.deployed();
 
+  const FactoryContractVerifier = await ethers.getContractFactory(
+    "FactoryContractVerifier",
+    {
+      libraries: { WorkSpaceFactoryLib: workspacefactorylib.address },
+    }
+  );
+  const factoryContractVerifier = await FactoryContractVerifier.deploy();
+  const factorycontractverifier = await factoryContractVerifier.deployed();
   const WorkSpaceFactory = await ethers.getContractFactory("WorkSpaceFactory", {
     libraries: { WorkSpaceFactoryLib: workspacefactorylib.address },
   });
@@ -23,13 +31,19 @@ async function setUp() {
   const workspacefactory = await workSpaceFactory.deployed();
 
   const WorkSpace = await ethers.getContractFactory("WorkSpace", {
-    libraries: { WorkSpaceLib: workspacelib.address },
+    libraries: {
+      WorkSpaceLib: workspacelib.address,
+      FactoryContractVerifier: factorycontractverifier.address,
+    },
   });
   const workSpace = await WorkSpace.deploy();
   const workspace = await workSpace.deployed();
 
   const Job = await ethers.getContractFactory("Job", {
-    libraries: { JobLib: joblib.address },
+    libraries: {
+      JobLib: joblib.address,
+      FactoryContractVerifier: factorycontractverifier.address,
+    },
   });
   const jobdeploy = await Job.deploy();
   const job = await jobdeploy.deployed();
@@ -142,12 +156,9 @@ describe("contract tests", async function() {
     let ownerAddress = await workspacefactory.getOwner();
     expect(ownerAddress).to.be.equal(factoryBoss.address);
 
-   
     expect(workspacefactory.setDisabled(true)).to.be.reverted;
 
     expect(workspacefactory.setContractFee(1)).to.be.reverted;
-
-
   });
 
   it("Test workspace metadata", async function() {
@@ -300,23 +311,27 @@ describe("contract tests", async function() {
       )
     ).to.be.reverted;
 
-
-    expect( workspace.registerWorker(
+    expect(
+      workspace.registerWorker(
         "metaddataurl",
         "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
         "",
         mockContractHash
-      )).to.be.reverted;
+      )
+    ).to.be.reverted;
 
     // Now I set the token hash so I can register with an address
 
     await workspace.addInviteToken("Hazx123sZ");
-    expect(workspace.registerClient(
-      "metadataurl",
-      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
-      "Hazx123sZ",
-      mockContractHash
-    )).to.emit(workspace,"RegistrationSuccess")
+
+    expect(
+      workspace.registerClient(
+        "metadataurl",
+        "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
+        "Hazx123sZ",
+        mockContractHash
+      )
+    ).to.emit(workspace, "RegistrationSuccess");
 
     let client = await workspace.clients(
       "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"
@@ -326,22 +341,25 @@ describe("contract tests", async function() {
 
     // The client cannot register as a worker and vice versa
 
-    expect(workspace.registerWorker(
+    expect(
+      workspace.registerWorker(
         "metadataurl",
         "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
         "Hazx123sZ",
         mockContractHash
-      )).to.be.reverted;
+      )
+    ).to.be.reverted;
 
     //Client tries to register twice
 
-    expect(workspace.registerClient(
+    expect(
+      workspace.registerClient(
         "metadataurl",
         "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
         "Hazx123sZ",
         mockContractHash
-      )).to.be.reverted;
-
+      )
+    ).to.be.reverted;
 
     //Turn of invites
 
@@ -349,22 +367,24 @@ describe("contract tests", async function() {
 
     // registering client again, without invite code and new address
 
-    expect(workspace.registerWorker(
+    expect(
+      workspace.registerWorker(
         "metaurl",
         "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
         "",
         mockContractHash
-      )).to.emit(workspace,"RegistrationSuccess");
+      )
+    ).to.emit(workspace, "RegistrationSuccess");
 
-
- 
     // I try to register twice
-   expect(workspace.registerWorker(
+    expect(
+      workspace.registerWorker(
         "metaurl",
         "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
         "",
         mockContractHash
-      )).to.be.reverted;
+      )
+    ).to.be.reverted;
 
     let addresses = await workspace.getAddresses();
     expect(addresses.length).to.equal(2);
@@ -457,31 +477,37 @@ describe("contract tests", async function() {
     const CLIENT_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("CLIENT_ROLE")
     );
-    expect(workspace.moderateTarget(
-      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
-      WORKER_ROLE,
-      true
-    )).to.emit(workspace,"Moderated");
+    expect(
+      workspace.moderateTarget(
+        "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
+        WORKER_ROLE,
+        true
+      )
+    ).to.emit(workspace, "Moderated");
     let disabledWorker = await workspace.workers(
       "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
     );
     expect(disabledWorker.disabled).to.be.true;
 
-    expect(workspace.moderateTarget(
-      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
-      CLIENT_ROLE,
-      true
-    )).to.emit(workspace,"Moderated");
+    expect(
+      workspace.moderateTarget(
+        "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
+        CLIENT_ROLE,
+        true
+      )
+    ).to.emit(workspace, "Moderated");
     let disabledClient = await workspace.clients(
       "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"
     );
     expect(disabledClient.disabled).to.be.true;
     // now I just set them back
-    expect(workspace.moderateTarget(
-      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
-      WORKER_ROLE,
-      false
-    )).to.emit(workspace,"Moderated");
+    expect(
+      workspace.moderateTarget(
+        "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
+        WORKER_ROLE,
+        false
+      )
+    ).to.emit(workspace, "Moderated");
     let disabledWorker2 = await workspace.workers(
       "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
     );
@@ -590,9 +616,10 @@ describe("contract tests", async function() {
     expect(workspace.connect(client).createJob()).to.be.reverted;
 
     await workspace.moderateTarget(client.address, CLIENT_ROLE, false);
-    expect(workspace.connect(client).createJob()).to.emit(workspace,"JobCreated");
-   
-   
+    expect(workspace.connect(client).createJob()).to.emit(
+      workspace,
+      "JobCreated"
+    );
     const clientJobs = await workspace.clientjobs(client.address);
     expect(clientJobs.length).to.equal(1);
   });
