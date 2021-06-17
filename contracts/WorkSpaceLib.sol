@@ -6,12 +6,11 @@ struct WorkSpaceState {
     uint8 fee; // This is the percentage the manager gets per job
     address managerAddress; // This is the address of the manager where he recieves the above fee
     string metadataUrl; // Metadata points to ipfs link, this is the workspace metadata
-    mapping(bytes32 =>string) writtenContractUrls; // The key is the contract hash, the value is the ipfs hash link    
+    mapping(bytes32 => string) writtenContractUrls; // The key is the contract hash, the value is the ipfs hash link
     //clients and workers must agree to one when signing up,
-    bytes32 currentWorkerWrittenContractHash; 
+    bytes32 currentWorkerWrittenContractHash;
     // The current contract index should be the default offered to a client or worker
     bytes32 currentClientWrittenContractHash;
-    
     bytes32 inviteTokenHash;
     bool requireInvite;
     bool registrationOpen;
@@ -21,14 +20,12 @@ struct WorkSpaceState {
     address factoryAddress;
     mapping(address => Worker) workers;
     mapping(address => Client) clients;
-
     mapping(address => Job[]) clientjobs; // jobs are mapped to the clients address
+    //TODO: workerJobs
     mapping(address => Job[]) workerjobs;
-    mapping(address => bool) lock; 
-    
     address jobLibraryAddress;
-    uint workSpaceVersion;
-    uint jobVersion;
+    uint256 workSpaceVersion;
+    uint256 jobVersion;
     // Managers cannot see workers and clients so easily without knowing the address.
     // I store all the addresses in an array and the front end can fetch all and call view functions with them
     address[] workerAddresses;
@@ -40,7 +37,6 @@ struct Worker {
     bool occupied; // Does the worker have a job now?
     bool disabled; // workers can be disabled by the manager for moderation reasons
     bool initialized;
-   
     bytes32 writtenContractHash; // this is passed in, hash is created on front end from a written contract
 }
 
@@ -53,8 +49,30 @@ struct Client {
 
 library WorkSpaceLib {
     event RegistrationSuccess(bytes32 role, address registeredAddress);
-    event Moderated(address,bytes32,bool);
+    event Moderated(address, bytes32, bool);
 
+    function setStateForInit(
+        WorkSpaceState storage self,
+        uint8 _fee,
+        string memory _metadataUrl,
+        address _manager,
+        address _jobLibraryAddress,
+        uint256 workSpaceVersion,
+        uint256 jobVersion,
+        address _factoryAddress
+    ) external {
+        require(_manager != address(0), "504");
+        require(_jobLibraryAddress != address(0), "505");
+        self.fee = _fee;
+        self.metadataUrl = _metadataUrl;
+        self.managerAddress = payable(_manager);
+        self.requireInvite = true;
+        self.factoryAddress = _factoryAddress;
+        self.jobLibraryAddress = _jobLibraryAddress;
+        self.workSpaceVersion = workSpaceVersion;
+        self.jobVersion = jobVersion;
+
+    }
 
     function registerWorker(
         WorkSpaceState storage self,
@@ -63,6 +81,8 @@ library WorkSpaceLib {
         string calldata inviteToken,
         bytes32 _writtenContractHash
     ) external {
+        require(workerAddress != address(0), "511");
+
         if (self.requireInvite) {
             // if the registration required invite, I check the token validity
             require(
@@ -96,6 +116,7 @@ library WorkSpaceLib {
         string calldata inviteToken,
         bytes32 _writtenContractHash
     ) external {
+        require(clientAddress != address(0), "515");
         if (self.requireInvite) {
             require(
                 checkInviteTokenValidity(self.inviteTokenHash, inviteToken)
@@ -133,7 +154,7 @@ library WorkSpaceLib {
 
             self.workers[moderatedAddress] = worker;
 
-            emit Moderated(moderatedAddress,target,setTo);
+            emit Moderated(moderatedAddress, target, setTo);
 
             return self.workers[moderatedAddress].disabled;
         } else if (target == RoleLib.CLIENT_ROLE) {
@@ -142,10 +163,27 @@ library WorkSpaceLib {
             require(client.initialized, "Client is not initialized");
             client.disabled = setTo;
             self.clients[moderatedAddress] = client;
-            emit Moderated(moderatedAddress,target,setTo);
+            emit Moderated(moderatedAddress, target, setTo);
             return self.clients[moderatedAddress].disabled;
         }
     }
+
+    function assignWorkers(WorkSpaceState storage self,address to,
+        address[] calldata workerAddresses, bytes32 role, address sender) external{
+        Job job = Job(payable(to));
+         
+        if(role == RoleLib.CLIENT_ROLE){
+            require(job.getClient() == sender);
+        }
+
+        for (uint256 i = 0; i < workerAddresses.length; i++) {
+            // add the jobs to the workerjobs variable here
+            self.workerjobs[workerAddresses[i]].push(job);
+        }
+
+          //job.addAssignees();
+        }
+
 
 
     // The manager can set the fee anytime
@@ -161,8 +199,7 @@ library WorkSpaceLib {
         self.metadataUrl = _metadataUrl;
     }
 
-
-/////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////
 
     // A manager can add contract urls. these are real written contracts the parties agree to
     function addWrittenContract(
@@ -186,8 +223,6 @@ library WorkSpaceLib {
     ) external {
         self.currentClientWrittenContractHash = newHash;
     }
-
-
 
     function addInviteToken(
         WorkSpaceState storage self,
@@ -222,10 +257,18 @@ library WorkSpaceLib {
 
         return false;
     }
-    function setRegistrationOpen(WorkSpaceState storage self,bool isOpen) external {
+
+    function setRegistrationOpen(WorkSpaceState storage self, bool isOpen)
+        external
+    {
         self.registrationOpen = isOpen;
     }
-    function getAddresses(WorkSpaceState storage self) external view returns (address[] memory, address[] memory){
-        return (self.workerAddresses,self.clientAddresses);
+
+    function getAddresses(WorkSpaceState storage self)
+        external
+        view
+        returns (address[] memory, address[] memory)
+    {
+        return (self.workerAddresses, self.clientAddresses);
     }
 }
