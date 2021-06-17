@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/utils/Multicall.sol";
 
 contract WorkSpace is AccessControl, CloneFactory,Initializable,Multicall{
     event RegistrationSuccess(bytes32 role, address registeredAddress);
+    event Moderated(address,bytes32,bool);
 
     //TODO: ADD events to tests!!
     event JobCreated();
