@@ -40,7 +40,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
     }
 
     function createWorkSpace(uint8 _fee, string memory _metadata)
-        public
+        external
         returns (address)
     {
         //if upgrade is available, allow the creation of multiple workspaces
@@ -69,6 +69,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
             state.workSpaces[msg.sender][index] = address(workSpace);
 
             state.amountOfWorkSpaces++;
+            _setupRole(RoleLib.WORKSPACE,address(workSpace));
             emit WorkSpaceCreated(
                 msg.sender,
                 state.workSpaces[msg.sender][index],
@@ -85,6 +86,11 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         return state.workSpaces[msg.sender][index];
     }
 
+    function createJob(address _clientAddress) external onlyRole(RoleLib.WORKSPACE) returns (address){
+        Job job = Job(payable(createClone(state.jobLibraryAddress)));
+        job.initialize(msg.sender,_clientAddress);
+        return address(job);
+    }
 
     function setContractFee(int8 _newFee)
         external
