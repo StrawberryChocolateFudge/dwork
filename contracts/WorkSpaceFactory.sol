@@ -87,7 +87,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
 
     function createJob(address _clientAddress,string calldata metadataUrl) external onlyRole(RoleLib.WORKSPACE) returns (address){
         Job job = Job(payable(createClone(state.jobLibraryAddress)));
-        job.initialize(msg.sender,_clientAddress,metadataUrl);
+        job.initialize(msg.sender,_clientAddress,metadataUrl,state.jobLibraryVersion);
         return address(job);
     }
 
@@ -130,11 +130,11 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         return state.getContractAddress(_address);
     }
 
-    function amountOfWorkSpaces() external view returns (uint256) {
+    function amountOfWorkSpaces() external view returns (uint32) {
         return state.amountOfWorkSpaces;
     }
 
-    function getContractFee() external view returns (uint256) {
+    function getContractFee() external view returns (uint8) {
         return state.getContractFee();
     }
 
@@ -158,13 +158,18 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         return state.currentIndex[_manager];
     }
 
-    function getHistoricWorkspace(uint256 idx, address _manager)
+    function getHistoricWorkspace(uint32 idx, address _manager)
         external
         view
         returns (address)
     {
         return state.workSpaces[_manager][idx];
     }
+
+    function getCurrentJobLibraryVersion() external view returns(uint32){
+        return state.jobLibraryVersion;
+    }
+
 
     fallback() external {
         emit FallbackTriggered(msg.sender);

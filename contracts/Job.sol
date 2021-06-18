@@ -23,7 +23,7 @@ contract Job is AccessControl, Initializable, Multicall {
     using FactoryContractVerifier for FactoryContractVerifierState;
     FactoryContractVerifierState verifier;
 
-    function initialize(address _workSpaceAddress, address _clientAddress,string calldata metadataUrl)
+    function initialize(address _workSpaceAddress, address _clientAddress,string calldata metadataUrl,uint32 version)
         external
         initializer()
     {
@@ -38,7 +38,7 @@ contract Job is AccessControl, Initializable, Multicall {
         state.disabled = false;
         state.factoryAddress = msg.sender;
         state.metadataUrl = metadataUrl;
-
+        state.version = version;
         WorkSpace workSpc = WorkSpace(_workSpaceAddress);
         address _managerAddress = workSpc.getManagerAddress();
         _setupRole(RoleLib.CLIENT_ROLE, _clientAddress);
@@ -68,6 +68,10 @@ contract Job is AccessControl, Initializable, Multicall {
     }
     function getWorker() external view returns (address){
         return state.assignee[state.lastAssignee];
+    }
+
+    function getVersion() external view returns (uint32){
+        return state.version;
     }
     //TODO: test recieving ether
     receive() external payable {

@@ -6,16 +6,16 @@ import "hardhat/console.sol";
 struct FactoryState {
     address owner;
     mapping(address => mapping(uint => address)) workSpaces;
-    mapping(address => uint) currentIndex;
+    mapping(address => uint32) currentIndex;
 
-    uint256 amountOfWorkSpaces;
+    uint32 amountOfWorkSpaces;
     uint8 contractFee;
     bool disabled;
     address workSpaceLibraryAddress;
     address jobLibraryAddress;
     string metadataUrl;
-    uint jobLibraryVersion;
-    uint workSpaceLibraryVersion;
+    uint32 jobLibraryVersion;
+    uint32 workSpaceLibraryVersion;
 }
 
 library WorkSpaceFactoryLib {

@@ -134,7 +134,7 @@ async function setUpJobTests() {
   const clientJobs = await workspace.clientjobs(client.address);
 
 
-  return { workspace,clientJobs,worker,client,owner,factoryBoss };
+  return { workspace,clientJobs,worker,client,owner,factoryBoss,workspacefactory };
 }
 
 module.exports = { setUp, addLibrariesAndWorkspace, setUpJobTests };

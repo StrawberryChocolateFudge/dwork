@@ -10,11 +10,13 @@ struct JobState {
     bool disabled;
   
     //There is only one assignment active at a time, the last
-    mapping(uint256 => Assignment) assignments;
-    uint256 lastAssignment;
-    mapping(uint256 => address payable) assignee; // this is like snapshots of assignee data accessed with a hashs
-    uint256 lastAssignee;
+    mapping(uint32 => Assignment) assignments;
+    uint32 lastAssignment;
+    mapping(uint32 => address payable) assignee; // this is like snapshots of assignee data accessed with a hashs
+    uint32 lastAssignee;
     string metadataUrl;
+
+    uint32 version;
 }
 
 struct Assignment {
@@ -28,7 +30,7 @@ struct Assignment {
 }
 
 library JobLib {
-    event AssigneeAdded(address _address, uint256 _share);
+    event AssigneeAdded(address _address);
     uint256 public constant totalShares = 1000000;
 
 
