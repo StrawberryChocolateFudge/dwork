@@ -27,8 +27,6 @@ contract Job is AccessControl, Initializable, Multicall {
         external
         initializer()
     {
-        // maybe I cannot have a check for the bytecode because the caller is a clone!
-        // in that case, I have to call jobs through the factory!
         require(
             verifier.checkFactoryBytecode(msg.sender),
             "The caller is not a workspace"
