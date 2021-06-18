@@ -7,7 +7,7 @@ import "./WorkSpace.sol";
 import "./RoleLib.sol";
 import "./WorkSpaceFactoryLib.sol";
 import "./CloneFactory.sol";
-
+import "hardhat/console.sol";
 // The workspace factory is used to create and track WorkSpaces
 contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
     using WorkSpaceFactoryLib for FactoryState;
@@ -28,6 +28,8 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         address sender
     );
 
+    event JobLibraryVersion(uint);
+    event WorkSpaceLibraryVersion(uint);
 
     constructor(address _owner) {
         require(_owner != address(0), "500");
@@ -60,14 +62,11 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
                 _fee,
                 _metadata,
                 msg.sender,
-                state.jobLibraryAddress,
-                state.workSpaceLibraryVersion,
-                state.jobLibraryVersion
+                state.workSpaceLibraryVersion
             ){
             state.currentIndex[msg.sender] += 1;
             index = state.currentIndex[msg.sender];
             state.workSpaces[msg.sender][index] = address(workSpace);
-
             state.amountOfWorkSpaces++;
             _setupRole(RoleLib.WORKSPACE,address(workSpace));
             emit WorkSpaceCreated(

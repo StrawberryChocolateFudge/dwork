@@ -25,6 +25,9 @@ library WorkSpaceFactoryLib {
         string metadata
     );
 
+    event JobLibraryVersion(uint);
+    event WorkSpaceLibraryVersion(uint);
+
     function getContractAddress(FactoryState storage self, address _key)
         public
         view
@@ -73,7 +76,7 @@ library WorkSpaceFactoryLib {
             self.workSpaceLibraryAddress = _address;
 
         }
-
+        emit WorkSpaceLibraryVersion(self.workSpaceLibraryVersion);
         return self.workSpaceLibraryAddress;
     }
 
@@ -83,20 +86,18 @@ library WorkSpaceFactoryLib {
             self.jobLibraryAddress = _address;
             self.jobLibraryVersion += 1;
         }
-
+        emit JobLibraryVersion(self.jobLibraryVersion);
         return self.jobLibraryAddress;
     }
 
     function checkIfWorkSpaceIsOutdated(FactoryState storage self,address _manager ) external view returns (bool){
         uint current = self.currentIndex[_manager];
         if(current == 0){
+            //True means the workspace is Not outdated
             return true;
         }
         WorkSpace workspace__ = WorkSpace(self.workSpaces[_manager][current]);
-        (uint workSpaceVersion, uint JobVersion) = workspace__.getVersions();
-        if(self.jobLibraryVersion > JobVersion){
-            return true;
-        }
+        (uint workSpaceVersion) = workspace__.getVersion();
         if(self.workSpaceLibraryVersion > workSpaceVersion){
             return true;
         }

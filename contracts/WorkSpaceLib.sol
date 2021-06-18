@@ -23,9 +23,8 @@ struct WorkSpaceState {
     mapping(address => Job[]) clientjobs; // jobs are mapped to the clients address
     //TODO: workerJobs
     mapping(address => Job[]) workerjobs;
-    address jobLibraryAddress;
+
     uint256 workSpaceVersion;
-    uint256 jobVersion;
     // Managers cannot see workers and clients so easily without knowing the address.
     // I store all the addresses in an array and the front end can fetch all and call view functions with them
     address[] workerAddresses;
@@ -56,21 +55,16 @@ library WorkSpaceLib {
         uint8 _fee,
         string memory _metadataUrl,
         address _manager,
-        address _jobLibraryAddress,
         uint256 workSpaceVersion,
-        uint256 jobVersion,
         address _factoryAddress
     ) external {
         require(_manager != address(0), "504");
-        require(_jobLibraryAddress != address(0), "505");
         self.fee = _fee;
         self.metadataUrl = _metadataUrl;
         self.managerAddress = payable(_manager);
         self.requireInvite = true;
         self.factoryAddress = _factoryAddress;
-        self.jobLibraryAddress = _jobLibraryAddress;
         self.workSpaceVersion = workSpaceVersion;
-        self.jobVersion = jobVersion;
 
     }
 

@@ -24,13 +24,11 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
     using FactoryContractVerifier for FactoryContractVerifierState;
     FactoryContractVerifierState verifier;
 
-    function initialize(
+        function initialize(
         uint8 _fee,
         string memory _metadataUrl,
         address _manager,
-        address _jobLibraryAddress,
-        uint256 workSpaceVersion,
-        uint256 jobVersion
+        uint256 workSpaceVersion
     ) external initializer() {
         require(verifier.checkFactoryBytecode(msg.sender), "506");
 
@@ -38,9 +36,7 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
             _fee,
             _metadataUrl,
             _manager,
-            _jobLibraryAddress,
             workSpaceVersion,
-            jobVersion,
             msg.sender
         );
         _setupRole(RoleLib.MANAGER_ROLE, _manager);
@@ -208,10 +204,6 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
         return state.writtenContractUrls[contractHash];
     }
 
-    function getJobLibraryAddress() external view returns (address) {
-        return state.jobLibraryAddress;
-    }
-
     function metadataUrl() external view returns (string memory) {
         return state.metadataUrl;
     }
@@ -256,8 +248,8 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
         return state.managerAddress;
     }
 
-    function getVersions() external view returns (uint256, uint256) {
-        return (state.workSpaceVersion, state.jobVersion);
+    function getVersion() external view returns (uint256) {
+        return (state.workSpaceVersion);
     }
 
     function getAddresses()
