@@ -1,93 +1,10 @@
-const { loadFixture } = require("@ethereum-waffle/provider");
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { createUnparsedSourceFile } = require("typescript");
+const {setUp,addLibrariesAndWorkspace,setUpJobTests} = require("./setup");
 
-async function setUp() {
-  const [owner, client, worker, factoryBoss] = await ethers.getSigners();
 
-  const WorkSpaceFactoryLib = await ethers.getContractFactory(
-    "WorkSpaceFactoryLib"
-  );
-  const workSpacefactioryLib = await WorkSpaceFactoryLib.deploy();
-  const workspacefactorylib = await workSpacefactioryLib.deployed();
-  const WorkSpaceLib = await ethers.getContractFactory("WorkSpaceLib");
-  const workSpaceLib = await WorkSpaceLib.deploy();
-  const workspacelib = await workSpaceLib.deployed();
-  const JobLib = await ethers.getContractFactory("JobLib");
-  const jobLib = await JobLib.deploy();
-  const joblib = await jobLib.deployed();
-
-  const FactoryContractVerifier = await ethers.getContractFactory(
-    "FactoryContractVerifier",
-    {
-      libraries: { WorkSpaceFactoryLib: workspacefactorylib.address },
-    }
-  );
-  const factoryContractVerifier = await FactoryContractVerifier.deploy();
-  const factorycontractverifier = await factoryContractVerifier.deployed();
-  const WorkSpaceFactory = await ethers.getContractFactory("WorkSpaceFactory", {
-    libraries: { WorkSpaceFactoryLib: workspacefactorylib.address },
-  });
-  const workSpaceFactory = await WorkSpaceFactory.deploy(factoryBoss.address);
-  const workspacefactory = await workSpaceFactory.deployed();
-
-  const WorkSpace = await ethers.getContractFactory("WorkSpace", {
-    libraries: {
-      WorkSpaceLib: workspacelib.address,
-      FactoryContractVerifier: factorycontractverifier.address,
-    },
-  });
-  const workSpace = await WorkSpace.deploy();
-  const workspace = await workSpace.deployed();
-
-  const Job = await ethers.getContractFactory("Job", {
-    libraries: {
-      JobLib: joblib.address,
-      FactoryContractVerifier: factorycontractverifier.address,
-    },
-  });
-  const jobdeploy = await Job.deploy();
-  const job = await jobdeploy.deployed();
-
-  const DLink = await ethers.getContractFactory("DLink");
-  const dLink = await DLink.deploy();
-  const dlink = await dLink.deployed();
-
-  return {
-    workspacefactory,
-    workspacemaster: workspace,
-    jobmaster: job,
-    dlink,
-    owner,
-    client,
-    worker,
-    factoryBoss,
-  };
-}
-
-async function addLibrariesAndWorkspace(
-  workspacefactory,
-  workspace,
-  job,
-  factoryBoss
-) {
-  await workspacefactory
-    .connect(factoryBoss)
-    .setWorkSpaceLibrary(workspace.address)
-    .then(async () => {
-      await workspacefactory
-        .connect(factoryBoss)
-        .setJobLibraryAddress(job.address)
-        .then(async () => {
-          // I createa  workspace here for convenience
-          await workspacefactory.createWorkSpace(1, "This is the metadata");
-        });
-    });
-}
-
-describe("contract tests", async function () {
-  it("Tests hacking the master contracts", async function () {
+describe("factory and workspace tests", async function () {
+  it("Failing to hack the master contracts", async function () {
     const { workspacemaster, workspacefactory, jobmaster } = await setUp();
 
     expect(
@@ -113,7 +30,7 @@ describe("contract tests", async function () {
     ).to.be.reverted;
   });
 
-  it("test create workspace", async function () {
+  it("Create workspace", async function () {
     const { workspacefactory, workspacemaster, jobmaster, factoryBoss } =
       await setUp();
     await workspacefactory
@@ -147,7 +64,7 @@ describe("contract tests", async function () {
     expect(amountOfWorkSpaces).to.be.equal(1);
   });
 
-  it("Test contract fees", async function () {
+  it("Contract fees", async function () {
     const { workspacefactory, factoryBoss } = await setUp();
     let initialContractFee = await workspacefactory.getContractFee();
     expect(initialContractFee).to.be.equal(0);
@@ -160,7 +77,7 @@ describe("contract tests", async function () {
     expect(workspacefactory.setContractFee(1)).to.be.reverted;
   });
 
-  it("Test workspace metadata", async function () {
+  it("Workspace metadata", async function () {
     const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
@@ -184,7 +101,7 @@ describe("contract tests", async function () {
     expect(await workspace.metadataUrl()).to.equal(newMetadata);
   });
 
-  it("Test disabling registration", async function () {
+  it("eegistration disabling", async function () {
     const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
@@ -209,7 +126,7 @@ describe("contract tests", async function () {
     expect(await workspace.getRegistrationOpen()).to.be.true;
   });
 
-  it("test written contracts", async function () {
+  it("Written contracts", async function () {
     const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
@@ -249,7 +166,7 @@ describe("contract tests", async function () {
     expect(currentClientContractHash).to.equal(contractHash1);
   });
 
-  it("test roles and registration", async function () {
+  it("Roles and registration", async function () {
     const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
@@ -378,7 +295,7 @@ describe("contract tests", async function () {
     );
   });
 
-  it("test workspace fees", async function () {
+  it("Workspace fees", async function () {
     const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
@@ -405,7 +322,7 @@ describe("contract tests", async function () {
     expect(await workspace.fee()).to.equal(8);
   });
 
-  it("test moderation", async function () {
+  it("Moderation", async function () {
     const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
@@ -483,7 +400,7 @@ describe("contract tests", async function () {
     expect(disabledWorker2.disabled).to.be.false;
   });
 
-  it("test dlink contract", async function () {
+  it("Dlink contract", async function () {
     const { dlink, client } = await setUp();
     const addrArrays = [
       "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
@@ -509,7 +426,7 @@ describe("contract tests", async function () {
     expect(failed).to.be.true;
   });
 
-  it("test client creating a job", async function () {
+  it("Client creates a job", async function () {
     const {
       workspacefactory,
       workspacemaster,
@@ -555,10 +472,11 @@ describe("contract tests", async function () {
     );
     await workspace.moderateTarget(client.address, CLIENT_ROLE, true);
 
-    expect(workspace.connect(client).createJob()).to.be.reverted;
+    expect(workspace.connect(client).createJob("This is the metadata")).to.be
+      .reverted;
 
     await workspace.moderateTarget(client.address, CLIENT_ROLE, false);
-    expect(workspace.connect(client).createJob()).to.emit(
+    expect(workspace.connect(client).createJob("This is the metadata")).to.emit(
       workspace,
       "JobCreated"
     );
@@ -566,7 +484,7 @@ describe("contract tests", async function () {
     expect(clientJobs.length).to.equal(1);
   });
 
-  it("test deprecated workspace checking", async function () {
+  it("Workspace Deprecation checking", async function () {
     // I will create 2 workspaces and then check which one is deprecated from the order
     // This is useful if the users saved a dlink to a workspace, but the workspace got updated
     const {
@@ -597,18 +515,24 @@ describe("contract tests", async function () {
       .reverted;
 
     // I set the workspace to a new address, just to increase the index, this is not a valid contractaddr
-    await expect(workspacefactory
-      .connect(factoryBoss)
-      .setWorkSpaceLibrary(factoryBoss.address)).to.emit(workspacefactory,"WorkSpaceLibraryVersion");
+    await expect(
+      workspacefactory
+        .connect(factoryBoss)
+        .setWorkSpaceLibrary(factoryBoss.address)
+    ).to.emit(workspacefactory, "WorkSpaceLibraryVersion");
     // just to increment the index
-    await expect(workspacefactory
-      .connect(factoryBoss)
-      .setWorkSpaceLibrary(workspacemaster.address)).to.emit(workspacefactory,"WorkSpaceLibraryVersion");
+    await expect(
+      workspacefactory
+        .connect(factoryBoss)
+        .setWorkSpaceLibrary(workspacemaster.address)
+    ).to.emit(workspacefactory, "WorkSpaceLibraryVersion");
     // //The next one sets it back
 
     //   //Create one more, this time it should succeed
 
-    await expect(workspacefactory.createWorkSpace(1, "this is the metadata")).to.emit(workspacefactory,"WorkSpaceCreated");
+    await expect(
+      workspacefactory.createWorkSpace(1, "this is the metadata")
+    ).to.emit(workspacefactory, "WorkSpaceCreated");
     const indx2 = await workspacefactory.getCurrentWorkspaceIndex(
       owner.address
     );
@@ -620,29 +544,24 @@ describe("contract tests", async function () {
 
     expect(workspaceaddressOne).to.not.equal(workspaceaddressTwo);
 
-      // from the clients and workers point of view, if they saved the workspace address
-      // and it changes, they must get a warning on the front end about deprecation!
-      // so I must have a way to check in JS
-      const workspaceOne = await ethers.getContractAt(
-        "WorkSpace",
-        workspaceaddressOne,
-        client
-      );
-      const managerAddress = await workspaceOne.getManagerAddress();
-      const currentIndex = await workspacefactory.getCurrentWorkspaceIndex(
-        managerAddress
-      );
-      const currentWorkspace = await workspacefactory.getHistoricWorkspace(
-        currentIndex,
-        managerAddress
-      );
-      // and voila we get the current workspace, if its not the same as address one, the address one is deprecated!
-      expect(currentWorkspace).to.not.equal(workspaceaddressOne);
-      expect(currentWorkspace).to.equal(workspaceaddressTwo);
+    // from the clients and workers point of view, if they saved the workspace address
+    // and it changes, they must get a warning on the front end about deprecation!
+    // so I must have a way to check in JS
+    const workspaceOne = await ethers.getContractAt(
+      "WorkSpace",
+      workspaceaddressOne,
+      client
+    );
+    const managerAddress = await workspaceOne.getManagerAddress();
+    const currentIndex = await workspacefactory.getCurrentWorkspaceIndex(
+      managerAddress
+    );
+    const currentWorkspace = await workspacefactory.getHistoricWorkspace(
+      currentIndex,
+      managerAddress
+    );
+    // and voila we get the current workspace, if its not the same as address one, the address one is deprecated!
+    expect(currentWorkspace).to.not.equal(workspaceaddressOne);
+    expect(currentWorkspace).to.equal(workspaceaddressTwo);
   });
-
-  it("test deprecated Job checking",async function(){throw "err";});  
-  it("test assigning workers to job", async function () {throw "err";});
-  it("test sending ether to Job contract", async function () {throw "err";});
-  it("test withdrawing ether from  job contract", async function () {throw "err";});
 });
