@@ -23,7 +23,6 @@ struct WorkSpaceState {
     mapping(address => Job[]) clientjobs; // jobs are mapped to the clients address
     //TODO: workerJobs
     mapping(address => Job[]) workerjobs;
-
     uint256 workSpaceVersion;
     // Managers cannot see workers and clients so easily without knowing the address.
     // I store all the addresses in an array and the front end can fetch all and call view functions with them
@@ -49,6 +48,7 @@ struct Client {
 library WorkSpaceLib {
     event RegistrationSuccess(bytes32 role, address registeredAddress);
     event Moderated(address, bytes32, bool);
+    event AddedWorker(address to, address worker);
 
     function setStateForInit(
         WorkSpaceState storage self,
@@ -65,7 +65,6 @@ library WorkSpaceLib {
         self.requireInvite = true;
         self.factoryAddress = _factoryAddress;
         self.workSpaceVersion = workSpaceVersion;
-
     }
 
     function registerWorker(
@@ -162,23 +161,25 @@ library WorkSpaceLib {
         }
     }
 
-    function assignWorkers(WorkSpaceState storage self,address to,
-        address[] calldata workerAddresses, bytes32 role, address sender) external{
+    function assignWorker(
+        WorkSpaceState storage self,
+        address to,
+        address workerAddress,
+        bytes32 role,
+        address sender
+    ) external {
         Job job = Job(payable(to));
-         
-        if(role == RoleLib.CLIENT_ROLE){
+        if (role == RoleLib.CLIENT_ROLE) {
             require(job.getClient() == sender);
         }
 
-        for (uint256 i = 0; i < workerAddresses.length; i++) {
-            // add the jobs to the workerjobs variable here
-            self.workerjobs[workerAddresses[i]].push(job);
+        self.workerjobs[workerAddress].push(job);
+
+        bool success = job.addWorker(workerAddress);
+        if (success) {
+            emit AddedWorker(to, workerAddress);
         }
-
-          //job.addAssignees();
-        }
-
-
+    }
 
     // The manager can set the fee anytime
     function setFee(WorkSpaceState storage self, uint8 _fee) external {
@@ -192,8 +193,6 @@ library WorkSpaceLib {
     ) external {
         self.metadataUrl = _metadataUrl;
     }
-
-    /////////////////////////////////////////////////////////
 
     // A manager can add contract urls. these are real written contracts the parties agree to
     function addWrittenContract(

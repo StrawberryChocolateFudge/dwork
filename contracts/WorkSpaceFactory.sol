@@ -85,9 +85,9 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         return state.workSpaces[msg.sender][index];
     }
 
-    function createJob(address _clientAddress) external onlyRole(RoleLib.WORKSPACE) returns (address){
+    function createJob(address _clientAddress,string calldata metadataUrl) external onlyRole(RoleLib.WORKSPACE) returns (address){
         Job job = Job(payable(createClone(state.jobLibraryAddress)));
-        job.initialize(msg.sender,_clientAddress);
+        job.initialize(msg.sender,_clientAddress,metadataUrl);
         return address(job);
     }
 

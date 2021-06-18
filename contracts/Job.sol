@@ -14,30 +14,32 @@ import "./FactoryContractVerifier.sol";
 // The job contains the description of the job and works as a refundable escrow.
 // The payment is either refounded or split
 
-contract Job is AccessControl, Initializable,Multicall {
-    event Received(address,uint);
+contract Job is AccessControl, Initializable, Multicall {
+    event Received(address, uint256);
 
     using JobLib for JobState;
     JobState state;
 
-    
     using FactoryContractVerifier for FactoryContractVerifierState;
     FactoryContractVerifierState verifier;
 
-    function initialize(
-        address _workSpaceAddress,
-        address _clientAddress
-    ) external initializer() {
+    function initialize(address _workSpaceAddress, address _clientAddress,string calldata metadataUrl)
+        external
+        initializer()
+    {
         // maybe I cannot have a check for the bytecode because the caller is a clone!
         // in that case, I have to call jobs through the factory!
-        require(verifier.checkFactoryBytecode(msg.sender),"The caller is not a workspace");
-        
+        require(
+            verifier.checkFactoryBytecode(msg.sender),
+            "The caller is not a workspace"
+        );
+
         state.workspaceAddress = _workSpaceAddress;
         state.clientAddress = _clientAddress;
         state.created = block.timestamp;
         state.disabled = false;
-        state.round = 0;
         state.factoryAddress = msg.sender;
+        state.metadataUrl = metadataUrl;
 
         WorkSpace workSpc = WorkSpace(_workSpaceAddress);
         address _managerAddress = workSpc.getManagerAddress();
@@ -46,12 +48,14 @@ contract Job is AccessControl, Initializable,Multicall {
         _setupRole(RoleLib.WORKSPACE, _workSpaceAddress);
     }
 
-    function addAssignees(address[] calldata workerAddresses) external{
-       //state.hereIAm();
+    function addWorker(
+        address workerAddress) external onlyRole(RoleLib.WORKSPACE) returns (bool) {
+        require(state.disabled == false, "The job is disabled");
+        state.addWorker(workerAddress);
+        return true;
     }
 
-
-    // function createAssignment(    
+    // function createAssignment(
     //     address[] memory assignees_,
     //     uint256[] memory shares_,
     //     string memory metadataUrl_
@@ -61,36 +65,20 @@ contract Job is AccessControl, Initializable,Multicall {
     //     //  state.createAssignment(assignees_, shares_, metadataUrl_);
     // }
 
-    function getClient() external view returns(address){
+    function getClient() external view returns (address) {
         return state.clientAddress;
     }
-
+    function getWorker() external view returns (address){
+        return state.assignee[state.lastAssignee];
+    }
     //TODO: test recieving ether
-    receive() external payable{
-       emit Received(msg.sender,msg.value);
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
     }
 
-    fallback() external payable{
-      emit Received(msg.sender,msg.value);  
+    fallback() external payable {
+        emit Received(msg.sender, msg.value);
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     //TODO: this contract must call the workspace often for evaluating if the workers or clients are disabled or not
 

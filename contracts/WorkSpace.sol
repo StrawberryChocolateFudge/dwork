@@ -15,9 +15,10 @@ import "hardhat/console.sol";
 contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
     event RegistrationSuccess(bytes32 role, address registeredAddress);
     event Moderated(address, bytes32, bool);
-    event JobCreated();
+    event JobCreated(address);
     event FallbackTriggered(address);
-    event Assigned(address to, address[] workers, uint256[] shares);
+    event AddedWorker(address to, address worker);
+
     using WorkSpaceLib for WorkSpaceState;
     WorkSpaceState state;
 
@@ -42,17 +43,16 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
         _setupRole(RoleLib.MANAGER_ROLE, _manager);
     }
 
-    function createJob() external onlyRole(RoleLib.CLIENT_ROLE) {
+    function createJob(string calldata _metadataUrl) external onlyRole(RoleLib.CLIENT_ROLE) {
         require(state.clients[msg.sender].initialized == true, "507");
         require(state.clients[msg.sender].disabled == false, "508");
-
         WorkSpaceFactory factory = WorkSpaceFactory(state.factoryAddress);
-        Job job = Job(payable(factory.createJob(msg.sender)));
+        Job job = Job(payable(factory.createJob(msg.sender,_metadataUrl)));
         state.clientjobs[msg.sender].push(job);
-        emit JobCreated();
+        emit JobCreated(address(job));
     }
 
-    function addWorkers(address to, address[] calldata workerAddresses)
+    function addWorker(address to, address workerAddress)
         external
     {
         require(
@@ -62,16 +62,16 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
         );
 
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
-            state.assignWorkers(
+            state.assignWorker(
                 to,
-                workerAddresses,
+                workerAddress,
                 RoleLib.CLIENT_ROLE,
                 msg.sender
             );
         } else {
-            state.assignWorkers(
+            state.assignWorker(
                 to,
-                workerAddresses,
+                workerAddress,
                 RoleLib.MANAGER_ROLE,
                 msg.sender
             );
