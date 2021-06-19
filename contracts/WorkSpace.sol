@@ -61,6 +61,10 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
             "509"
         );
 
+        //TODO: test this require condition!
+        Client memory client = state.clients[msg.sender]; 
+        require(!client.disabled,"Disabled client cannot add worker");
+
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
             state.assignWorker(
                 to,
