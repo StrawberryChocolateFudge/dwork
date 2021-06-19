@@ -11,27 +11,37 @@ digraph G {
     color=lightgrey;
     node [style=filled,color=pink];
     fontsize = 20;
+    Client[shape=circle,style=wedged,fillcolor="grey"];
+    Worker[shape=circle,style=wedged,fillcolor="grey"];
+    Manager[shape=circle,style=wedged,fillcolor="grey"];
+    Holders[shape=circle,style=wedged,fillcolor="grey"]
     
     
-    WorkSpaceFactory ->  WorkSpace [arrowhead = dot]
-    WorkSpace -> Manager [arrowhead = dot]
-    Manager -> Client [arrowhead = dot]
-    Manager -> Worker [arrowhead = dot]
+    Factory ->  WorkSpace [arrowhead = dot]
+    Factory -> Job [arrowhead = dot]
+    Manager -> Factory
+    Manager -> WorkSpace [arrowhead = dot]
+    Manager -> Job [arrowhead = dot]
+    WorkSpace -> Job [arrowhead = dot]
+    WorkSpace -> Worker [arrowhead = dot]
     Worker -> Job [arrowhead = dot]
+    Client -> WorkSpace [arrowhead = dot] 
     Client -> Job  [arrowhead = diamond]
     Job -> Manager   [arrowhead = diamond]
     Job -> Dividends   [arrowhead = diamond]
     Job -> Worker   [arrowhead = diamond]
-    
+    Client -> dLink
+    WorkSpace -> dLink
+    Worker -> dLink 
 
 
-    WorkSpaceCredit -> CrowdSale [arrowhead = box]
+    dWork -> CrowdSale [arrowhead = box]
 
     CrowdSale -> Holders [arrowhead = box]
     Dividends -> Holders [arrowhead = diamond]
     Dividends -> Holders [arrowhead = box]
     Holders -> Dividends [arrowhead = box]
-    WorkSpaceCredit -> ExternalSwapContract [arrowhead = box]
+    dWork -> ExternalSwapContract [arrowhead = box]
     ExternalSwapContract -> Holders [arrowhead = box]
     Holders -> ExternalSwapContract [arrowhead = box]
   }
