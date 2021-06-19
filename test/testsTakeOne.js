@@ -101,7 +101,7 @@ describe("factory and workspace tests", async function () {
     expect(await workspace.metadataUrl()).to.equal(newMetadata);
   });
 
-  it("eegistration disabling", async function () {
+  it("Registration disabling", async function () {
     const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
       await setUp();
     await addLibrariesAndWorkspace(
