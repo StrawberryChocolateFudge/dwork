@@ -8,8 +8,9 @@ import "./RoleLib.sol";
 import "./WorkSpaceFactoryLib.sol";
 import "./CloneFactory.sol";
 import "hardhat/console.sol";
+
 // The workspace factory is used to create and track WorkSpaces
-contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
+contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
     using WorkSpaceFactoryLib for FactoryState;
     FactoryState private state;
     mapping(address => bool) private createLocks;
@@ -20,16 +21,12 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         string metadata
     );
 
-    event CreateWorkSpaceFailed(
-        address sender
-    );
+    event CreateWorkSpaceFailed(address sender);
 
-    event FallbackTriggered(
-        address sender
-    );
+    event FallbackTriggered(address sender);
 
-    event JobLibraryVersion(uint);
-    event WorkSpaceLibraryVersion(uint);
+    event JobLibraryVersion(uint256);
+    event WorkSpaceLibraryVersion(uint256);
 
     constructor(address _owner) {
         require(_owner != address(0), "500");
@@ -46,9 +43,8 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         returns (address)
     {
         //if upgrade is available, allow the creation of multiple workspaces
-        //The creator will aslo pass if this is the first workspace he created
-        require(state.checkIfWorkSpaceIsOutdated(msg.sender),"502");
-
+        //The creator will also pass if this is the first workspace he created
+        require(state.checkIfWorkSpaceIsOutdated(msg.sender), "502");
 
         require(!state.disabled, "501");
         // Locking the create so a user can only create one at a time, no reentrancy
@@ -56,19 +52,22 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         createLocks[msg.sender] = true;
         uint256 index;
 
-        WorkSpace workSpace = WorkSpace(createClone(state.workSpaceLibraryAddress));
+        WorkSpace workSpace =
+            WorkSpace(createClone(state.workSpaceLibraryAddress));
 
-        try workSpace.initialize(
+        try
+            workSpace.initialize(
                 _fee,
                 _metadata,
                 msg.sender,
                 state.workSpaceLibraryVersion
-            ){
+            )
+        {
             state.currentIndex[msg.sender] += 1;
             index = state.currentIndex[msg.sender];
             state.workSpaces[msg.sender][index] = address(workSpace);
             state.amountOfWorkSpaces++;
-            _setupRole(RoleLib.WORKSPACE,address(workSpace));
+            _setupRole(RoleLib.WORKSPACE, address(workSpace));
             emit WorkSpaceCreated(
                 msg.sender,
                 state.workSpaces[msg.sender][index],
@@ -85,9 +84,20 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         return state.workSpaces[msg.sender][index];
     }
 
-    function createJob(address _clientAddress,string calldata metadataUrl) external onlyRole(RoleLib.WORKSPACE) returns (address){
+    function createJob(address _clientAddress, string calldata metadataUrl)
+        external
+        onlyRole(RoleLib.WORKSPACE)
+        returns (address)
+    {
         Job job = Job(payable(createClone(state.jobLibraryAddress)));
-        job.initialize(msg.sender,_clientAddress,metadataUrl,state.jobLibraryVersion);
+        job.initialize(
+            msg.sender,
+            _clientAddress,
+            metadataUrl,
+            state.jobLibraryVersion,
+            state.contractFee,
+            state.dividendsLibrary
+        );
         return address(job);
     }
 
@@ -166,10 +176,9 @@ contract WorkSpaceFactory is AccessControl, CloneFactory,Multicall {
         return state.workSpaces[_manager][idx];
     }
 
-    function getCurrentJobLibraryVersion() external view returns(uint32){
+    function getCurrentJobLibraryVersion() external view returns (uint32) {
         return state.jobLibraryVersion;
     }
-
 
     fallback() external {
         emit FallbackTriggered(msg.sender);

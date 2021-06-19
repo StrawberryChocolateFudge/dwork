@@ -13,9 +13,11 @@ struct FactoryState {
     bool disabled;
     address workSpaceLibraryAddress;
     address jobLibraryAddress;
+    address dividendsLibrary;
     string metadataUrl;
     uint32 jobLibraryVersion;
     uint32 workSpaceLibraryVersion;
+    uint32 dividendsLibraryVersion;
 }
 
 library WorkSpaceFactoryLib {
