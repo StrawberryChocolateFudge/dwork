@@ -10,23 +10,33 @@ import "./JobLib.sol";
 import "./Initializer.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
+import "hardhat/console.sol";
 
 // The job contains the description of the job and works as a refundable escrow.
 // The payment is either refounded or split
 
 contract Job is AccessControl, Initializable, Multicall {
     event Received(address, uint256);
-
+    event AssignmentAdded(bool ready);
+    event AssignmentReady(bool ready);
+    event AssignmentAccepted(uint256 date);
+    event WorkStarted(uint256 date);
+    event WorkDone(uint256 date);
+    event DisputeRequested(uint256 date);
+    event MetadataUrlChange(string url);
     using JobLib for JobState;
     JobState state;
 
     using FactoryContractVerifier for FactoryContractVerifierState;
     FactoryContractVerifierState verifier;
-
-    function initialize(address _workSpaceAddress, address _clientAddress,string calldata metadataUrl,uint32 version)
-        external
-        initializer()
-    {
+    function initialize(
+        address _workSpaceAddress,
+        address _clientAddress,
+        string calldata metadataUrl,
+        uint32 version,
+        uint8 contractFee,
+        address dividendsContract
+    ) external initializer() {
         require(
             verifier.checkFactoryBytecode(msg.sender),
             "The caller is not a workspace"
@@ -41,85 +51,134 @@ contract Job is AccessControl, Initializable, Multicall {
         state.version = version;
         WorkSpace workSpc = WorkSpace(_workSpaceAddress);
         address _managerAddress = workSpc.getManagerAddress();
+        state.managementFee = workSpc.fee();
+        state.contractFee = contractFee;
+        state.dividendsContract = dividendsContract;
         _setupRole(RoleLib.CLIENT_ROLE, _clientAddress);
         _setupRole(RoleLib.MANAGER_ROLE, _managerAddress);
         _setupRole(RoleLib.WORKSPACE, _workSpaceAddress);
+        _setRoleAdmin(RoleLib.WORKER_ROLE, RoleLib.WORKSPACE);
     }
 
-    function addWorker(
-        address workerAddress) external onlyRole(RoleLib.WORKSPACE) returns (bool) {
+    function addWorker(address workerAddress)
+        external
+        onlyRole(RoleLib.WORKSPACE)
+        returns (bool)
+    {
         require(state.disabled == false, "The job is disabled");
         state.addWorker(workerAddress);
+        _setupRole(RoleLib.WORKER_ROLE, workerAddress);
+        console.log("wortker is getting added");
+        //renouce the role of the previous worker if there was one
+        if (state.lastAssignee - 1 != 0) {
+            //TODO: Test this role revoking!
+            revokeRole(
+                RoleLib.WORKER_ROLE,
+                state.assignee[state.lastAssignee - 1]
+            );
+        }
+
         return true;
     }
 
-    // function createAssignment(
-    //     address[] memory assignees_,
-    //     uint256[] memory shares_,
-    //     string memory metadataUrl_
-    // ) external {
-    //     //  TODO/: TEST:
-    //     //Locks!
-    //     //  state.createAssignment(assignees_, shares_, metadataUrl_);
-    // }
+    function addAssignment(bool ready) external onlyRole(RoleLib.CLIENT_ROLE) {
+        state.addAssignment(ready);
+    }
+
+    function markReady() external onlyRole(RoleLib.CLIENT_ROLE) {
+        state.markReady();
+    }
+
+    function startWork() external onlyRole(RoleLib.WORKER_ROLE) {
+        state.startWork();
+    }
+
+    function markDone() external onlyRole(RoleLib.WORKER_ROLE) {
+        state.markDone();
+        state.assignments[state.lastAssignment].finalPrice = address(this).balance;
+    }
+
+    function disputeRequested() external onlyRole(RoleLib.CLIENT_ROLE) {
+        require(
+            address(this).balance != 0,
+            "No need for dispute if there is no balance"
+        );
+        state.disputeRequested();
+    }
+    
+    function resolveDispute(bool refundAllowed)
+        external
+        onlyRole(RoleLib.MANAGER_ROLE)
+    {
+        state.resolveDispute(refundAllowed);
+    }
+
+    function markAccepted() external onlyRole(RoleLib.CLIENT_ROLE) {
+        state.markAccepted();
+    }
+
+    function setmetadataUrl(string memory metadataUrl) external onlyRole(RoleLib.CLIENT_ROLE) {
+        state.metadataUrl = metadataUrl;
+        emit MetadataUrlChange(metadataUrl);
+    }
+
+    function getMetadataUrl() external view returns (string memory){
+        return state.metadataUrl;
+    }
 
     function getClient() external view returns (address) {
         return state.clientAddress;
     }
-    function getWorker() external view returns (address){
+
+    function getWorker() external view returns (address) {
         return state.assignee[state.lastAssignee];
     }
 
-    function getVersion() external view returns (uint32){
+    function getVersion() external view returns (uint32) {
         return state.version;
     }
+    function getbalance() external view returns(uint256){
+        return address(this).balance;
+    }
+    function getTotalBalance() external view returns (uint256){
+        return state.totalBalance;
+    }
+
+
+    //TODO: Withdraw funtions
+
+
     //TODO: test recieving ether
     receive() external payable {
+        if (msg.value > 0) {
+            state.totalBalance += msg.value;
+        }
         emit Received(msg.sender, msg.value);
     }
 
     fallback() external payable {
+        if (msg.value > 0) {
+            state.totalBalance += msg.value;
+        }
         emit Received(msg.sender, msg.value);
     }
 
-    //TODO: this contract must call the workspace often for evaluating if the workers or clients are disabled or not
+   function kill() external onlyRole(RoleLib.CLIENT_ROLE){
+       // the client can selfdestruct the contract if the state is "Not ready" for workers to work'.
+       require(state.assignments[state.lastAssignment].ready != false,"The last assignment must not be active");
+       selfdestruct(payable(state.clientAddress));
+   }
 
-    //function fundJob() external payable onlyRole(CLIENT_ROLE) {
-    // This should be used to fund the job, if the job is not reusable, this should throw after calling it once
-    //}
 
-    //TODO: most interactions with this contract should be throught the workspace
-    // so no direct access with roles, only the workspace role can access it
-    // except for public methods
-
-    // // Client can cancel the job, disabling it, refunding the tokens.
-    // // If the job has already been assigned, the canceling requires the managers signature also
-    // function cancelJobForClient() external onlyRole(CLIENT_ROLE) {}
-
-    // // The manager can assign a client to the worker who can access the jobs this way
-    // function assingToClient() external onlyRole(MANAGER_ROLE) {}
-
-    // // The manager can remove a worker from a client, if the worker has jobs in progress, they will now get canceled.
-    // function removeFromClient() external onlyRole(MANAGER_ROLE) {}
-
-    // //The worker can take a job, his address is placed in the assignedTo field
-    // // TODO calls to this are delegated to the workspace contract
-
-    // function takeJob() external onlyRole(WORKER_ROLE) {}
-
-    // // The worker can mark a job finished, claming the reward.
-    // function finishJob() external onlyRole(WORKER_ROLE) {}
-
-    // // The a client can accept the finished job
-    // function acceptFinishedJob() external onlyRole(CLIENT_ROLE) {}
-
-    // // The worker can cancel the job without any penalties
-    // function cancelJobForWorker() external onlyRole(WORKER_ROLE) {}
-
-    // // The manager can to approve the cancelation
-    // function approveCancel() external onlyRole(MANAGER_ROLE) {}
-
-    // function kill()external {
-    //    // require that msg sender has a role manager and client
-    // }
+     function whoAmI() external view returns (string memory) {
+        if (hasRole(RoleLib.MANAGER_ROLE, msg.sender)) {
+            return "manager";
+        } else if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
+            return "client";
+        } else if (hasRole(RoleLib.WORKER_ROLE, msg.sender)) {
+            return "worker";
+        } else {
+            return "not registered";
+        }
+    }
 }
