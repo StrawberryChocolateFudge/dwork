@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.5;
 
+
 struct JobState {
     address factoryAddress; // The address of the factory,to get the fees
     address workspaceAddress; // The address of the workspace that created the job
     //to get fees and manager address
     address clientAddress; // the address of the client
     address dividendsContract;
+    address managerAddress;
     uint256 created;
     bool disabled;
     //There is only one assignment active at a time, the last
@@ -17,8 +19,8 @@ struct JobState {
     string metadataUrl;
     uint32 version;
     uint256 totalBalance;
-    uint8 managementFee;
-    uint8 contractFee;
+    uint16 managementFee;
+    uint16 contractFee;
 }
 
 struct Assignment {
@@ -41,11 +43,10 @@ library JobLib {
     event AssignmentAdded(bool ready);
     event AssignmentReady(bool ready);
     event WorkStarted(uint256 date);
-    event WorkDone(uint256 date);
     event DisputeRequested(uint256 date);
     event AssignmentAccepted(uint256 date);
 
-    uint256 public constant totalShares = 1000000;
+    uint16 constant feeBase = 10000;
 
     function addWorker(JobState storage self, address worker)
         external
@@ -117,7 +118,6 @@ library JobLib {
         emit AssignmentReady(true);
     }
 
-    //TODO TEST!
     function startWork(JobState storage self) external {
         require(
             self.assignments[self.lastAssignment].initialized,
@@ -141,7 +141,6 @@ library JobLib {
             "The work didn't start yet."
         );
         self.assignments[self.lastAssignment].done = true;
-        emit WorkDone(block.timestamp);
     }
 
     function disputeRequested(JobState storage self) external {
