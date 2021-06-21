@@ -7,6 +7,10 @@ import "./WorkSpace.sol";
 import "./RoleLib.sol";
 import "./WorkSpaceFactoryLib.sol";
 import "./CloneFactory.sol";
+import "./IWorkSpace.sol";
+import "./IJob.sol";
+
+
 import "hardhat/console.sol";
 
 // The workspace factory is used to create and track WorkSpaces
@@ -51,9 +55,8 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         require(createLocks[msg.sender] == false, "503");
         createLocks[msg.sender] = true;
         uint256 index;
-        //TODO: use interface here to allow changing the workspace
-        WorkSpace workSpace =
-            WorkSpace(createClone(state.workSpaceLibraryAddress));
+        IWorkSpace workSpace =
+            IWorkSpace(createClone(state.workSpaceLibraryAddress));
 
         try
             workSpace.initialize(
@@ -89,8 +92,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         onlyRole(RoleLib.WORKSPACE)
         returns (address)
     {
-            //TODO: Use and interface here to allow changing the Job library
-        Job job = Job(payable(createClone(state.jobLibraryAddress)));
+        IJob job = IJob(payable(createClone(state.jobLibraryAddress)));
         job.initialize(
             msg.sender,
             _clientAddress,
