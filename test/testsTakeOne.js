@@ -71,12 +71,13 @@ describe("factory and workspace tests", async function () {
     let ownerAddress = await workspacefactory.getOwner();
     expect(ownerAddress).to.be.equal(factoryBoss.address);
     // the owner is the factoryboss so the bellow calls get rejected
+
     expect(workspacefactory.setDisabled(true)).to.be.reverted;
     expect(workspacefactory.setContractFee(1)).to.be.reverted;
 
     expect(
-      workspacefactory.connect(factoryBoss).setContractFee(123)
-    ).to.be.revertedWith("Fee cannot be higher than 100");
+      workspacefactory.connect(factoryBoss).setContractFee(1230)
+    ).to.be.revertedWith("Fee cannot be higher than 1000");
    
     expect(
       workspacefactory.connect(factoryBoss).setContractFee(12)
