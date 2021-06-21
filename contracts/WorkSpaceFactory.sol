@@ -27,7 +27,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
 
     event JobLibraryVersion(uint256);
     event WorkSpaceLibraryVersion(uint256);
-    event ContractFeeChange(uint8);
+    event ContractFeeChange(uint16);
     constructor(address _owner) {
         require(_owner != address(0), "500");
         state.owner = _owner;
@@ -51,7 +51,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         require(createLocks[msg.sender] == false, "503");
         createLocks[msg.sender] = true;
         uint256 index;
-
+        //TODO: use interface here to allow changing the workspace
         WorkSpace workSpace =
             WorkSpace(createClone(state.workSpaceLibraryAddress));
 
@@ -89,6 +89,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         onlyRole(RoleLib.WORKSPACE)
         returns (address)
     {
+            //TODO: Use and interface here to allow changing the Job library
         Job job = Job(payable(createClone(state.jobLibraryAddress)));
         job.initialize(
             msg.sender,
@@ -101,12 +102,12 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         return address(job);
     }
 
-    function setContractFee(int8 _newFee)
+    function setContractFee(uint16 _newFee)
         external
         onlyRole(RoleLib.ADMIN_ROLE)
     {
-        require(_newFee <= 100,"Fee cannot be higher than 100");
-        state.contractFee = uint8(_newFee);
+        require(_newFee <= 1000,"Fee cannot be higher than 1000");
+        state.contractFee = _newFee;
         emit ContractFeeChange(state.contractFee);
 
     }
@@ -147,11 +148,12 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         return state.amountOfWorkSpaces;
     }
 
-    function getContractFee() external view returns (uint8) {
+    function getContractFee() external view returns (uint16) {
         return state.getContractFee();
     }
 
     function getOwner() external view returns (address) {
+        //TODO: CHANGE OWNER TO VOTE ON THE FUNCTION CALLS
         return state.getOwner();
     }
 

@@ -10,9 +10,10 @@ import "./Initializer.sol";
 import "./WorkSpaceFactory.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
+import "./IWorkSpace.sol";
 import "hardhat/console.sol";
 
-contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
+contract WorkSpace is IWorkSpace,AccessControl, CloneFactory, Initializable, Multicall {
     event RegistrationSuccess(bytes32 role, address registeredAddress);
     event Moderated(address, bytes32, bool);
     event JobCreated(address);
@@ -26,13 +27,13 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
     FactoryContractVerifierState verifier;
 
         function initialize(
-        uint8 _fee,
+        uint16 _fee,
         string memory _metadataUrl,
         address _manager,
         uint256 workSpaceVersion
     ) external initializer() {
         require(verifier.checkFactoryBytecode(msg.sender), "506");
-
+//TODO: require for fee to be over zero
         state.setStateForInit(
             _fee,
             _metadataUrl,
@@ -61,10 +62,12 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
             "509"
         );
 
-        //TODO: test this require condition!
-        Client memory client = state.clients[msg.sender]; 
-        require(!client.disabled,"Disabled client cannot add worker");
+        if(hasRole(RoleLib.CLIENT_ROLE, msg.sender)){
+      //TODO: test this require condition!
+        require(!state.clients[msg.sender].disabled,"Disabled client cannot add worker");
 
+        }
+  
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
             state.assignWorker(
                 to,
@@ -137,7 +140,8 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
         return state.moderateTarget(moderatedAddress, target, setTo);
     }
 
-    function setFee(uint8 _fee) external onlyRole(RoleLib.MANAGER_ROLE) {
+    function setFee(uint16 _fee) external onlyRole(RoleLib.MANAGER_ROLE) {
+        require(_fee <= 4000,"");
         state.setFee(_fee);
     }
 
@@ -148,7 +152,6 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
         state.setMetadata(_metadataUrl);
     }
 
-    //TODO: move to library
     function whoAmI() external view returns (string memory) {
         if (hasRole(RoleLib.MANAGER_ROLE, msg.sender)) {
             return "manager";
@@ -228,7 +231,7 @@ contract WorkSpace is AccessControl, CloneFactory, Initializable, Multicall {
         return state.clients[_address];
     }
 
-    function fee() external view returns (uint8) {
+    function fee() external view returns (uint16) {
         return state.fee;
     }
 

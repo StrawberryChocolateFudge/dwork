@@ -3,7 +3,7 @@ pragma solidity 0.8.5;
 import "./Job.sol";
 import "./RoleLib.sol";
 struct WorkSpaceState {
-    uint8 fee; // This is the percentage the manager gets per job
+    uint16 fee; // This is the percentage the manager gets per job
     address managerAddress; // This is the address of the manager where he recieves the above fee
     string metadataUrl; // Metadata points to ipfs link, this is the workspace metadata
     mapping(bytes32 => string) writtenContractUrls; // The key is the contract hash, the value is the ipfs hash link
@@ -52,13 +52,14 @@ library WorkSpaceLib {
 
     function setStateForInit(
         WorkSpaceState storage self,
-        uint8 _fee,
+        uint16 _fee,
         string memory _metadataUrl,
         address _manager,
         uint256 workSpaceVersion,
         address _factoryAddress
     ) external {
         require(_manager != address(0), "504");
+        require(_fee <= 1000 && _fee > 0,"Fee must be under or equal 1000 and bigger than zero");
         self.fee = _fee;
         self.metadataUrl = _metadataUrl;
         self.managerAddress = payable(_manager);
@@ -182,7 +183,8 @@ library WorkSpaceLib {
     }
 
     // The manager can set the fee anytime
-    function setFee(WorkSpaceState storage self, uint8 _fee) external {
+    function setFee(WorkSpaceState storage self, uint16 _fee) external {
+    require(_fee <= 1000 && _fee > 0,"Fee must be under or equal 1000 and bigger than zero");
         self.fee = _fee;
     }
 
