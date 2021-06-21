@@ -13,7 +13,13 @@ import "./FactoryContractVerifier.sol";
 import "./IWorkSpace.sol";
 import "hardhat/console.sol";
 
-contract WorkSpace is IWorkSpace,AccessControl, CloneFactory, Initializable, Multicall {
+contract WorkSpace is
+    IWorkSpace,
+    AccessControl,
+    CloneFactory,
+    Initializable,
+    Multicall
+{
     event RegistrationSuccess(bytes32 role, address registeredAddress);
     event Moderated(address, bytes32, bool);
     event JobCreated(address);
@@ -26,12 +32,12 @@ contract WorkSpace is IWorkSpace,AccessControl, CloneFactory, Initializable, Mul
     using FactoryContractVerifier for FactoryContractVerifierState;
     FactoryContractVerifierState verifier;
 
-        function initialize(
+    function initialize(
         uint16 _fee,
         string memory _metadataUrl,
         address _manager,
         uint256 workSpaceVersion
-    ) external initializer() {
+    ) external override initializer() {
         require(verifier.checkFactoryBytecode(msg.sender), "506");
         state.setStateForInit(
             _fee,
@@ -43,30 +49,44 @@ contract WorkSpace is IWorkSpace,AccessControl, CloneFactory, Initializable, Mul
         _setupRole(RoleLib.MANAGER_ROLE, _manager);
     }
 
-    function createJob(string calldata _metadataUrl) external onlyRole(RoleLib.CLIENT_ROLE) {
+    function createJob(string calldata _metadataUrl)
+        external
+        override
+        onlyRole(RoleLib.CLIENT_ROLE)
+    {
         require(state.clients[msg.sender].initialized == true, "507");
         require(state.clients[msg.sender].disabled == false, "508");
         WorkSpaceFactory factory = WorkSpaceFactory(state.factoryAddress);
-        Job job = Job(payable(factory.createJob(msg.sender,state.managerAddress,_metadataUrl,state.fee)));
+        Job job =
+            Job(
+                payable(
+                    factory.createJob(
+                        msg.sender,
+                        state.managerAddress,
+                        _metadataUrl,
+                        state.fee
+                    )
+                )
+            );
         state.clientjobs[msg.sender].push(job);
         emit JobCreated(address(job));
     }
 
-    function addWorker(address to, address workerAddress)
-        external
-    {
+    function addWorker(address to, address workerAddress) external override {
         require(
             hasRole(RoleLib.MANAGER_ROLE, msg.sender) ||
                 hasRole(RoleLib.CLIENT_ROLE, msg.sender),
             "509"
         );
 
-        if(hasRole(RoleLib.CLIENT_ROLE, msg.sender)){
-      //TODO: test this require condition!
-        require(!state.clients[msg.sender].disabled,"Disabled client cannot add worker");
-
+        if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
+            //TODO: test this require condition!
+            require(
+                !state.clients[msg.sender].disabled,
+                "Disabled client cannot add worker"
+            );
         }
-  
+
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
             state.assignWorker(
                 to,
@@ -140,7 +160,7 @@ contract WorkSpace is IWorkSpace,AccessControl, CloneFactory, Initializable, Mul
     }
 
     function setFee(uint16 _fee) external onlyRole(RoleLib.MANAGER_ROLE) {
-        require(_fee <= 4000,"");
+        require(_fee <= 4000, "");
         state.setFee(_fee);
     }
 

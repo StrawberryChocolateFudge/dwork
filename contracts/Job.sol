@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
 import "./IJob.sol";
 
-
 import "hardhat/console.sol";
 
 // The job contains the description of the job and works as a refundable escrow.
@@ -43,7 +42,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         uint16 contractFee,
         uint16 managementFee,
         address dividendsContract
-    ) external initializer() {
+    ) external override initializer() {
         require(
             verifier.checkFactoryBytecode(msg.sender),
             "The caller is not a workspace"
@@ -67,6 +66,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
 
     function addWorker(address workerAddress)
         external
+        override
         onlyRole(RoleLib.WORKSPACE)
         returns (bool)
     {
@@ -242,7 +242,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         locked = false;
     }
 
-    function getActualContractFee() internal  view returns (uint256) {
+    function getActualContractFee() internal view returns (uint256) {
         //TODO: Check for integer overflow
         return ((state.assignments[state.lastAssignment].finalPrice *
             uint256(state.contractFee)) / uint256(JobLib.feeBase));
