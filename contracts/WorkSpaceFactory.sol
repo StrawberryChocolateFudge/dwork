@@ -84,7 +84,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         return state.workSpaces[msg.sender][index];
     }
 
-    function createJob(address _clientAddress, string calldata metadataUrl)
+    function createJob(address _clientAddress, address _managerAddress,string calldata metadataUrl,uint16 managementFee)
         external
         onlyRole(RoleLib.WORKSPACE)
         returns (address)
@@ -94,9 +94,11 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         job.initialize(
             msg.sender,
             _clientAddress,
+            _managerAddress,
             metadataUrl,
             state.jobLibraryVersion,
             state.contractFee,
+            managementFee,
             state.dividendsLibrary
         );
         return address(job);

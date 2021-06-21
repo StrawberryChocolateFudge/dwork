@@ -33,7 +33,6 @@ contract WorkSpace is IWorkSpace,AccessControl, CloneFactory, Initializable, Mul
         uint256 workSpaceVersion
     ) external initializer() {
         require(verifier.checkFactoryBytecode(msg.sender), "506");
-//TODO: require for fee to be over zero
         state.setStateForInit(
             _fee,
             _metadataUrl,
@@ -48,7 +47,7 @@ contract WorkSpace is IWorkSpace,AccessControl, CloneFactory, Initializable, Mul
         require(state.clients[msg.sender].initialized == true, "507");
         require(state.clients[msg.sender].disabled == false, "508");
         WorkSpaceFactory factory = WorkSpaceFactory(state.factoryAddress);
-        Job job = Job(payable(factory.createJob(msg.sender,_metadataUrl)));
+        Job job = Job(payable(factory.createJob(msg.sender,state.managerAddress,_metadataUrl,state.fee)));
         state.clientjobs[msg.sender].push(job);
         emit JobCreated(address(job));
     }

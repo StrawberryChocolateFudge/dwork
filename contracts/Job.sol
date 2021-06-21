@@ -37,9 +37,11 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     function initialize(
         address _workSpaceAddress,
         address _clientAddress,
+        address _managerAddress,
         string calldata metadataUrl,
         uint32 version,
         uint16 contractFee,
+        uint16 managementFee,
         address dividendsContract
     ) external initializer() {
         require(
@@ -54,11 +56,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         state.factoryAddress = msg.sender;
         state.metadataUrl = metadataUrl;
         state.version = version;
-        //TODO: pass in the manager address and the workspace address so I can remove this call
-        WorkSpace workSpc = WorkSpace(_workSpaceAddress);
-        address _managerAddress = workSpc.getManagerAddress();
-        state.managerAddress = _managerAddress;
-        state.managementFee = workSpc.fee();
+        state.managementFee = managementFee;
         state.contractFee = contractFee;
         state.dividendsContract = dividendsContract;
         _setupRole(RoleLib.CLIENT_ROLE, _clientAddress);
