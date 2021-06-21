@@ -1,9 +1,9 @@
-const { ethers } = require("hardhat");
+const { ethers,waffle } = require("hardhat");
 const { expect } = require("chai");
 
-async function setUp() {
-  const [owner, client, worker, factoryBoss] = await ethers.getSigners();
 
+async function setUp() {
+  const [owner, client, worker,worker2, factoryBoss] = await ethers.getSigners();
   const WorkSpaceFactoryLib = await ethers.getContractFactory(
     "WorkSpaceFactoryLib"
   );
@@ -61,6 +61,7 @@ async function setUp() {
     client,
     worker,
     factoryBoss,
+    worker2
   };
 }
 
@@ -93,6 +94,7 @@ async function setUpJobTests() {
     client,
     factoryBoss,
     worker,
+    worker2
   } = await setUp();
   await addLibrariesAndWorkspace(
     workspacefactory,
@@ -134,7 +136,7 @@ async function setUpJobTests() {
   const clientJobs = await workspace.clientjobs(client.address);
 
 
-  return { workspace,clientJobs,worker,client,owner,factoryBoss,workspacefactory };
+  return { workspace,clientJobs,worker,client,owner,factoryBoss,workspacefactory,worker2 };
 }
 
 module.exports = { setUp, addLibrariesAndWorkspace, setUpJobTests };

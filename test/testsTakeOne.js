@@ -1,7 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const {setUp,addLibrariesAndWorkspace,setUpJobTests} = require("./setup");
-
+const { setUp, addLibrariesAndWorkspace, setUpJobTests } = require("./setup");
 
 describe("factory and workspace tests", async function () {
   it("Failing to hack the master contracts", async function () {
@@ -68,13 +67,22 @@ describe("factory and workspace tests", async function () {
     const { workspacefactory, factoryBoss } = await setUp();
     let initialContractFee = await workspacefactory.getContractFee();
     expect(initialContractFee).to.be.equal(0);
-
+    expect(workspacefactory.setContractFee(123)).to.be.reverted;
     let ownerAddress = await workspacefactory.getOwner();
     expect(ownerAddress).to.be.equal(factoryBoss.address);
-
+    // the owner is the factoryboss so the bellow calls get rejected
     expect(workspacefactory.setDisabled(true)).to.be.reverted;
-
     expect(workspacefactory.setContractFee(1)).to.be.reverted;
+
+    expect(
+      workspacefactory.connect(factoryBoss).setContractFee(123)
+    ).to.be.revertedWith("Fee cannot be higher than 100");
+   
+    expect(
+      workspacefactory.connect(factoryBoss).setContractFee(12)
+    ).to.emit(workspacefactory,"ContractFeeChange").withArgs(12);
+
+
   });
 
   it("Workspace metadata", async function () {
