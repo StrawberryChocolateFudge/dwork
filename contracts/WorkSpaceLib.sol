@@ -61,7 +61,7 @@ library WorkSpaceLib {
         require(_manager != address(0), "504");
         require(
             _fee <= 4000 && _fee > 0,
-            "Fee must be under or equal 4000 and bigger than zero"
+            "552"
         );
         self.fee = _fee;
         self.metadataUrl = _metadataUrl;
@@ -91,7 +91,7 @@ library WorkSpaceLib {
                 self.clients[workerAddress].initialized,
                 self.workers[workerAddress].initialized
             ),
-            "Client is already registered for something"
+            "553"
         );
         // Anyone can register as a worker if the above require is not triggered
 
@@ -124,7 +124,7 @@ library WorkSpaceLib {
                 self.clients[clientAddress].initialized,
                 self.workers[clientAddress].initialized
             ),
-            "Client is already registered for something"
+            "554"
         );
 
         self.clients[clientAddress] = Client({
@@ -146,7 +146,7 @@ library WorkSpaceLib {
     ) external returns (bool res) {
         if (target == RoleLib.WORKER_ROLE) {
             Worker memory worker = self.workers[moderatedAddress];
-            require(worker.initialized, "Worker is not initialized");
+            require(worker.initialized, "555");
             worker.disabled = setTo;
 
             self.workers[moderatedAddress] = worker;
@@ -157,7 +157,7 @@ library WorkSpaceLib {
         } else if (target == RoleLib.CLIENT_ROLE) {
             Client memory client = self.clients[moderatedAddress];
 
-            require(client.initialized, "Client is not initialized");
+            require(client.initialized, "556");
             client.disabled = setTo;
             self.clients[moderatedAddress] = client;
             emit Moderated(moderatedAddress, target, setTo);
@@ -172,6 +172,7 @@ library WorkSpaceLib {
         bytes32 role,
         address sender
     ) external {
+        require(contractExists(to),"551");
         Job job = Job(payable(to));
         if (role == RoleLib.CLIENT_ROLE) {
             require(job.getClient() == sender);
@@ -189,7 +190,7 @@ library WorkSpaceLib {
     function setFee(WorkSpaceState storage self, uint16 _fee) external {
         require(
             _fee <= 4000 && _fee > 0,
-            "Fee must be under or equal 4000 and bigger than zero"
+            "552"
         );
         self.fee = _fee;
     }
@@ -302,5 +303,13 @@ library WorkSpaceLib {
     function verifyCreateJob(WorkSpaceState storage self,address sender) external view {
         require(self.clients[sender].initialized == true, "507");
         require(self.clients[sender].disabled == false, "508");
+    }
+
+    function contractExists(address _contract) internal view returns (bool){
+        uint size;
+        assembly {
+            size := extcodesize(_contract)
+        }
+        return size > 0;
     }
 }

@@ -62,3 +62,9 @@ Errors
 548 : The work is not done, yet.
 549 : Only the manager or worker can sign up workers
 550 : Only the client and the manager can sign up workers
+551 : The job doesn't exist anymore
+552 : Fee must be under or equal 4000 and bigger than zero
+553 : Worker is already registered for something
+554 : Client is already registered for something
+555 : Worker is not initialized
+556 : Client is not initialized
