@@ -31,6 +31,8 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         uint256 managementFee,
         uint256 usageFee
     );
+    event Refund(uint32 assignmentIndex, uint256 amount);
+    event DisputeResolved(uint32 assignmentIndex,bool refund);
     using JobLib for JobState;
     JobState state;
     bool locked;
@@ -103,7 +105,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         state.markDone(address(this).balance);
     }
 
-    function disputeRequested() external onlyRole(RoleLib.CLIENT_ROLE) {
+    function disputeRequest() external onlyRole(RoleLib.CLIENT_ROLE) {
         require(address(this).balance != 0, "526");
         state.disputeRequested();
     }
@@ -188,6 +190,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         require(locked == false, "531");
         locked = true;
         //The refund sends all the balance to the client address
+        emit Refund(state.lastAssignment, address(this).balance);
         (bool refundSuccess, ) =
             payable(state.clientAddress).call{value: address(this).balance}("");
         require(refundSuccess, "537");

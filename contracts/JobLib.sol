@@ -46,6 +46,7 @@ library JobLib {
     event DisputeRequested(uint256 date);
     event AssignmentAccepted(uint256 date);
     event WorkDone(uint256 date, uint256 value);
+    event DisputeResolved(uint32 assignmentIndex, bool refund);
 
     uint16 constant feeBase = 10000;
 
@@ -174,6 +175,7 @@ library JobLib {
         //if the refund is allowed, the dispute state persists
         self.assignments[self.lastAssignment].disputeRequested = refundAllowed;
         self.assignments[self.lastAssignment].refundAllowed = refundAllowed;
+        emit DisputeResolved(self.lastAssignment, refundAllowed);
     }
 
     function markAccepted(JobState storage self) external {
@@ -182,10 +184,12 @@ library JobLib {
         emit AssignmentAccepted(block.timestamp);
     }
 
-    function verifyWithdraw(JobState storage self, uint256 balance) external view {
+    function verifyWithdraw(JobState storage self, uint256 balance)
+        external
+        view
+    {
         require(
-            balance >=
-                self.assignments[self.lastAssignment].finalPrice,
+            balance >= self.assignments[self.lastAssignment].finalPrice,
             "527"
         );
         require(
@@ -199,12 +203,19 @@ library JobLib {
         require(self.assignments[self.lastAssignment].accepted, "530");
     }
 
-   function iszero(uint256 value) internal pure returns (bool) {
+    function iszero(uint256 value) internal pure returns (bool) {
         return value == 0;
     }
 
-    function getFees(JobState storage self) external returns (uint256,uint256,uint256){
-         // factory fee can be max 1000, which is 10%
+    function getFees(JobState storage self)
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        // factory fee can be max 1000, which is 10%
         // management fee can be max 4000, which is 40%
         //fee base is 10.000 which is the 100%
         //The worker cannot get less than 50%
@@ -224,20 +235,24 @@ library JobLib {
         self.assignments[self.lastAssignment].managerPayed = managementFee;
         self.assignments[self.lastAssignment].feePayed = contractFee;
 
-
-       return (workerFee,managementFee,contractFee);
+        return (workerFee, managementFee, contractFee);
     }
 
-        function getActualContractFee(JobState storage self) internal view returns (uint256) {
+    function getActualContractFee(JobState storage self)
+        internal
+        view
+        returns (uint256)
+    {
         return ((self.assignments[self.lastAssignment].finalPrice *
             uint256(self.contractFee)) / uint256(JobLib.feeBase));
     }
 
-    function getActualManagementFee(JobState storage self) internal view returns (uint256) {
+    function getActualManagementFee(JobState storage self)
+        internal
+        view
+        returns (uint256)
+    {
         return ((self.assignments[self.lastAssignment].finalPrice *
             uint256(self.managementFee)) / uint256(JobLib.feeBase));
     }
-
-
-
 }
