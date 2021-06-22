@@ -36,7 +36,6 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     using JobLib for JobState;
     JobState state;
     bool locked;
-
     using FactoryContractVerifier for FactoryContractVerifierState;
     FactoryContractVerifierState verifier;
 
@@ -212,8 +211,8 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     }
 
     function kill() external onlyRole(RoleLib.CLIENT_ROLE) {
-        // the client can selfdestruct the contract if the state is "Not ready" for workers to work'.
-        require(state.assignments[state.lastAssignment].ready != false, "538");
+        // the client can selfdestruct the contract if the state is "Not ready" for workers to start work.
+        require(state.assignments[state.lastAssignment].ready == false, "538");
         selfdestruct(payable(state.clientAddress));
     }
 
