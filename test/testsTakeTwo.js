@@ -74,9 +74,7 @@ describe("Job tests", async function () {
     expect(await job.connect(worker).whoAmI()).to.equal("203");
     //enough ether must be deposited for the job to start
 
-    expect(job.connect(worker).startWork()).to.be.revertedWith(
-      "525"
-    );
+    expect(job.connect(worker).startWork()).to.be.revertedWith("525");
 
     const tx = {
       to: job.address,
@@ -128,13 +126,12 @@ describe("Job tests", async function () {
     //I got too many expects in a block, so I repeat in further tests
   });
 
-  it("create an asssignment with false and add a new worker", async () => {
+  it("start with not ready, add worker, finsh assignment, add new worker,revoke role", async () => {
     const {
       workspace,
       worker,
       client,
       owner: manager,
-      clientJobs,
       worker2,
     } = await setUpJobTests();
     const jobaddress = await workspace.clientjobs(client.address);
@@ -170,19 +167,138 @@ describe("Job tests", async function () {
     expect(job.connect(client).addAssignment(false))
       .to.emit(job, "AssignmentAdded")
       .withArgs(false);
-    
+
     expect(workspace.connect(client).addWorker(job.address, worker2.address))
       .to.emit(workspace, "AddedWorker")
       .withArgs(job.address, worker2.address);
     await client.sendTransaction(tx);
-    
+
     //TESTING THE ROLE REVOKING IN AddWorker() HERE
     expect(job.connect(worker).startWork()).to.be.reverted;
-    
-    
+    //second worker starts the job
+    expect(job.connect(client).markReady())
+      .to.emit(job, "AssignmentReady")
+      .withArgs(true);
+    expect(job.connect(client).markReady()).to.be.revertedWith("542");
+    expect(job.connect(worker2).startWork()).to.emit(job, "WorkStarted");
   });
 
-  it("assignment with disputes", async function () {
+  it("request dispute before assignment is ready", async function () {
+    //This is a refund scenario,
+    const {
+      workspace,
+      worker,
+      client,
+      owner: manager,
+      worker2,
+    } = await setUpJobTests();
+    const jobaddress = await workspace.clientjobs(client.address);
+    const job = await ethers.getContractAt("Job", jobaddress[0], client);
+    // assignment is created with true so the worker can begin work instantly
+    await job.connect(client).addAssignment(false);
+    expect(job.connect(client).disputeRequest()).to.be.revertedWith("526");
+    workspace.addWorker(job.address, worker.address);
+    const tx = {
+      to: job.address,
+      value: ethers.utils.parseEther("1"),
+    };
+    await client.sendTransaction(tx);
+
+    expect(job.connect(client).disputeRequest()).to.emit(
+      job,
+      "DisputeRequested"
+    );
+    // the manager will just accept the refund now
+    expect(job.connect(manager).resolveDispute(true))
+      .to.emit(job, "DisputeResolved")
+      .withArgs(1, true);
+
+    await expect(await job.connect(client).refund())
+      .to.changeEtherBalance(client, ethers.utils.parseEther("1"))
+      .and.to.emit(job, "Refund")
+      .withArgs(1, ethers.utils.parseEther("1"));
+  });
+
+  it("request dispute after the work started", async function () {
+    //This is a refund scenario,
+    const {
+      workspace,
+      worker,
+      client,
+      owner: manager,
+      worker2,
+    } = await setUpJobTests();
+    const jobaddress = await workspace.clientjobs(client.address);
+    const job = await ethers.getContractAt("Job", jobaddress[0], client);
+    // assignment is created with true so the worker can begin work instantly
+    await job.connect(client).addAssignment(false);
+    expect(job.connect(client).disputeRequest()).to.be.revertedWith("526");
+    workspace.addWorker(job.address, worker.address);
+    const tx = {
+      to: job.address,
+      value: ethers.utils.parseEther("1"),
+    };
+    await client.sendTransaction(tx);
+    await job.connect(client).markReady();
+    //This time, the Worker will take the job and work before the dispute
+
+    expect(job.connect(worker).startWork()).to.emit(job, "WorkStarted");
+
+    //The worker is not delivering? Can start a dispute
+    expect(job.connect(client).disputeRequest()).to.emit(
+      job,
+      "DisputeRequested"
+    );
+
+    // In the meanwhile the worker can mark the job done if he wants to
+    expect(job.connect(worker).markDone()).to.emit(job, "WorkDone");
+
+    // The manager cancels the dispute because the work has been done
+    expect(job.connect(manager).resolveDispute(false))
+      .to.emit(job, "DisputeResolved")
+      .withArgs(1, false);
+    //The worker cannot withdraw cuz even tho the job is done, its up to the client to release the funds
+    expect(job.connect(worker).withdraw()).to.be.revertedWith("530");
+
+    expect(job.connect(client).disputeRequest()).to.emit(
+      job,
+      "DisputeRequested"
+    );
+
+    //The manager resolves the dispute again
+    expect(job.connect(manager).resolveDispute(true))
+      .to.emit(job, "DisputeResolved")
+      .withArgs(1, true);
+    //and now the client can keep his refund there
+
+    expect(job.connect(client).addAssignment(false)).to.emit(
+      job,
+      "AssignmentAdded"
+    );
+    //Then the client can remove the worker, this is while he is didnt withdraw any money
+    expect(workspace.connect(client).addWorker(job.address, worker2.address))
+      .to.emit(workspace, "AddedWorker")
+      .withArgs(job.address, worker2.address);
+
+    await job.connect(client).markReady();
+    expect(job.connect(worker2).startWork()).to.emit(job, "WorkStarted");
+    expect(job.connect(worker2).markDone()).to.emit(job, "WorkDone");
+    expect(job.connect(client).markAccepted()).to.emit(
+      job,
+      "AssignmentAccepted"
+    );
+    expect(job.connect(worker).withdraw()).to.be.reverted;
+    expect(job.connect(worker2).withdraw())
+      .to.emit(job, "Withdraw")
+      .withArgs(
+        2,
+        ethers.utils.parseEther("0.79"),
+        ethers.utils.parseEther("0.2"),
+        ethers.utils.parseEther("0.01")
+      );
+  });
+
+  it("selfdestruct job", async function () {
     throw "err";
   });
 
