@@ -1,9 +1,20 @@
-const { ethers,waffle } = require("hardhat");
+const { ethers, waffle } = require("hardhat");
 const { expect } = require("chai");
 
-
 async function setUp() {
-  const [owner, client, worker,worker2, factoryBoss] = await ethers.getSigners();
+  const [owner, client, worker, worker2, factoryBoss] =
+    await ethers.getSigners();
+
+  const DividendsLib = await ethers.getContractFactory("DividendsLib");
+  const dividendsLib = await DividendsLib.deploy();
+  const dividendslib = await dividendsLib.deployed();
+
+  const Dividends = await ethers.getContractFactory("Dividends", {
+    libraries: { DividendsLib: dividendslib.address },
+  });
+  const dividends_dep = await Dividends.deploy();
+  const dividends = await dividends_dep.deployed();
+
   const WorkSpaceFactoryLib = await ethers.getContractFactory(
     "WorkSpaceFactoryLib"
   );
@@ -61,7 +72,8 @@ async function setUp() {
     client,
     worker,
     factoryBoss,
-    worker2
+    worker2,
+    dividends,
   };
 }
 
@@ -94,16 +106,23 @@ async function setUpJobTests() {
     client,
     factoryBoss,
     worker,
-    worker2
+    worker2,
+    dividends,
   } = await setUp();
   await addLibrariesAndWorkspace(
     workspacefactory,
     workspacemaster,
     jobmaster,
-    factoryBoss
+    factoryBoss,
+    dividends
   );
-  
- 
+  //I set the fee to 1% here
+  workspacefactory.connect(factoryBoss).setContractFee(100);
+  //I add the dividends library address now
+  await workspacefactory
+    .connect(factoryBoss)
+    .setDividendsLibraryAddress(dividends.address);
+
   let workspaceaddress = await workspacefactory.getContractAddress(
     owner.address
   );
@@ -118,6 +137,8 @@ async function setUpJobTests() {
   let mockContractHash = await ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("test hash")
   );
+  // 20% fee
+  await workspace.setFee(2000);
   await workspace.noInvites();
   // The manager signs up the client here
   await workspace.registerClient(
@@ -135,8 +156,16 @@ async function setUpJobTests() {
   workspace.connect(client).createJob("This is the metadata");
   const clientJobs = await workspace.clientjobs(client.address);
 
-
-  return { workspace,clientJobs,worker,client,owner,factoryBoss,workspacefactory,worker2 };
+  return {
+    workspace,
+    clientJobs,
+    worker,
+    client,
+    owner,
+    factoryBoss,
+    workspacefactory,
+    worker2,
+  };
 }
 
 module.exports = { setUp, addLibrariesAndWorkspace, setUpJobTests };
