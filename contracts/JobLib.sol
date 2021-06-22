@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.5;
-
+import "hardhat/console.sol";
 
 struct JobState {
     address factoryAddress; // The address of the factory,to get the fees
@@ -53,7 +53,6 @@ library JobLib {
         returns (bool)
     {
         require(worker != address(0), "worker is the zero address");
-        //TODO Test triggering the bellow require
         require(
             self.assignments[self.lastAssignment].startedWork == false,
             "Cannot assign new worker if work has started"
@@ -63,11 +62,14 @@ library JobLib {
         return true;
     }
 
-    function validatePayouts(JobState storage self)
+    function validatePayouts(JobState storage self,bool refundAllowed)
         internal
         view
         returns (bool)
-    {
+    {   
+        if(refundAllowed) {
+            return true;
+        }
         return
             self.assignments[self.lastAssignment].workerPayed > 0 &&
             self.assignments[self.lastAssignment].managerPayed > 0 &&
@@ -75,12 +77,11 @@ library JobLib {
     }
 
     function addAssignment(JobState storage self, bool ready) external {
+                
         if (self.assignments[self.lastAssignment].initialized) {
             require(
-                validatePayouts(self)||
-                    self.assignments[self.lastAssignment].refundAllowed,
-                "The last assignment's payments must be done or a refund must be issued"
-            );
+                validatePayouts(self, self.assignments[self.lastAssignment].refundAllowed),
+                "The last assignment's payments must be done or a refund must be issued");
             // If the assignment is refunded, the client can decide to not withdraw his money,
             // he can instead create a new assignment and use the funds for that.
             // he can assign a new worker if the new assignment is submitted as not ready.
@@ -101,7 +102,7 @@ library JobLib {
             feePayed: 0,
             refundPayed: 0
         });
-        emit AssignmentAdded(ready);
+
     }
 
     function markReady(JobState storage self) external {

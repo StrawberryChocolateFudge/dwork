@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
 import "./IJob.sol";
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 // The job contains the description of the job and works as a refundable escrow.
 // The payment is either refounded or split
@@ -25,7 +25,12 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     event WorkDone(uint256 date, uint256 value);
     event DisputeRequested(uint256 date);
     event MetadataUrlChange(string url);
-    event WorkerWithdraw(uint256 amount, uint32 assignmentIndex);
+    event Withdraw(
+        uint32 assignmentIndex,
+        uint256 workerFee,
+        uint256 managementFee,
+        uint256 usageFee
+    );
     using JobLib for JobState;
     JobState state;
     bool locked;
@@ -47,7 +52,6 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
             verifier.checkFactoryBytecode(msg.sender),
             "The caller is not a workspace"
         );
-
         state.workspaceAddress = _workSpaceAddress;
         state.clientAddress = _clientAddress;
         state.created = block.timestamp;
@@ -57,6 +61,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         state.version = version;
         state.managementFee = managementFee;
         state.contractFee = contractFee;
+        state.managerAddress = _managerAddress;
         state.dividendsContract = dividendsContract;
         _setupRole(RoleLib.CLIENT_ROLE, _clientAddress);
         _setupRole(RoleLib.MANAGER_ROLE, _managerAddress);
@@ -73,10 +78,8 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         require(state.disabled == false, "The job is disabled");
         state.addWorker(workerAddress);
         _setupRole(RoleLib.WORKER_ROLE, workerAddress);
-        console.log("wortker is getting added");
         //renouce the role of the previous worker if there was one
         if (state.lastAssignee - 1 != 0) {
-            //TODO: Test this role revoking!
             revokeRole(
                 RoleLib.WORKER_ROLE,
                 state.assignee[state.lastAssignee - 1]
@@ -88,6 +91,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
 
     function addAssignment(bool ready) external onlyRole(RoleLib.CLIENT_ROLE) {
         state.addAssignment(ready);
+        emit AssignmentAdded(ready);
     }
 
     function markReady() external onlyRole(RoleLib.CLIENT_ROLE) {
@@ -95,12 +99,11 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     }
 
     function startWork() external onlyRole(RoleLib.WORKER_ROLE) {
+        require(address(this).balance >= 1 ether, "Minimum balance is 1 ether");
         state.startWork();
     }
 
     function markDone() external onlyRole(RoleLib.WORKER_ROLE) {
-        //TODO: I need to require the final price is not too low.
-        //A job cannot be done if the deposited amount is too low to pay out fees
         state.markDone();
         state.assignments[state.lastAssignment].finalPrice = address(this)
             .balance;
@@ -161,7 +164,6 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         return state.totalBalance;
     }
 
-    //TODO: Withdraw funtions, can be called by the worker or the manager
     function withdraw() external {
         require(
             hasRole(RoleLib.MANAGER_ROLE, msg.sender) ||
@@ -191,7 +193,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         // management fee can be max 4000, which is 40%
         //fee base is 10.000 which is the 100%
         //The worker cannot get less than 50%
-
+        
         uint256 contractFee = getActualContractFee();
         uint256 managementFee = getActualManagementFee();
         uint256 workerFee =
@@ -199,30 +201,41 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
                 contractFee -
                 managementFee;
         require(
-            contractFee + managementFee + workerFee == address(this).balance,
+            contractFee + managementFee + workerFee ==
+                state.assignments[state.lastAssignment].finalPrice,
             "oh noes the calculation went wrong"
         );
+        state.assignments[state.lastAssignment].workerPayed = workerFee;
+        state.assignments[state.lastAssignment].managerPayed = managementFee;
+        state.assignments[state.lastAssignment].feePayed = contractFee;        
+
         (bool workerPayedSuccess, ) =
             state.assignee[state.lastAssignee].call{value: workerFee}("");
         require(
             workerPayedSuccess,
             "Unable to send value to worker, recipient may have reverted"
         );
-
         (bool managerPayedSuccess, ) =
-            payable(state.managerAddress).call{value: workerFee}("");
+            payable(state.managerAddress).call{value: managementFee}("");
         require(
             managerPayedSuccess,
             "Unable to send value manager, recipient may have reverted"
         );
-
         (bool dividendsPayedSuccess, ) =
             payable(state.dividendsContract).call{value: contractFee}("");
         require(
             dividendsPayedSuccess,
             "Unable to send value dividends, recipient may have reverted"
         );
+       
+
         locked = false;
+        emit Withdraw(
+            state.lastAssignment,
+            workerFee,
+            managementFee,
+            contractFee
+        );
     }
 
     function refund() external onlyRole(RoleLib.CLIENT_ROLE) {
@@ -243,13 +256,11 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     }
 
     function getActualContractFee() internal view returns (uint256) {
-        //TODO: Check for integer overflow
         return ((state.assignments[state.lastAssignment].finalPrice *
             uint256(state.contractFee)) / uint256(JobLib.feeBase));
     }
 
     function getActualManagementFee() internal view returns (uint256) {
-        //TODO: Check for integer overflow
         return ((state.assignments[state.lastAssignment].finalPrice *
             uint256(state.managementFee)) / uint256(JobLib.feeBase));
     }

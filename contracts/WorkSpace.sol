@@ -160,7 +160,6 @@ contract WorkSpace is
     }
 
     function setFee(uint16 _fee) external onlyRole(RoleLib.MANAGER_ROLE) {
-        require(_fee <= 4000, "");
         state.setFee(_fee);
     }
 
