@@ -78,12 +78,10 @@ describe("factory and workspace tests", async function () {
     expect(
       workspacefactory.connect(factoryBoss).setContractFee(1230)
     ).to.be.revertedWith("521");
-   
-    expect(
-      workspacefactory.connect(factoryBoss).setContractFee(12)
-    ).to.emit(workspacefactory,"ContractFeeChange").withArgs(12);
 
-
+    expect(workspacefactory.connect(factoryBoss).setContractFee(12))
+      .to.emit(workspacefactory, "ContractFeeChange")
+      .withArgs(12);
   });
 
   it("Workspace metadata", async function () {
@@ -332,8 +330,15 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Moderation", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
-      await setUp();
+    const {
+      workspacefactory,
+      workspacemaster,
+      jobmaster,
+      owner,
+      factoryBoss,
+      worker,
+      client,
+    } = await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
@@ -354,58 +359,62 @@ describe("factory and workspace tests", async function () {
       ethers.utils.toUtf8Bytes("test hash")
     );
     await workspace.noInvites();
+
     await workspace.registerClient(
       "metadataurl",
-      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
+      client.address,
       "",
       mockContractHash
     );
+
+    expect(
+      workspace
+        .connect(client)
+        .registerWorker("metadataurl", worker.address, "", mockContractHash)
+    ).to.revertedWith("549");
+
     await workspace.registerWorker(
       "metadataurl",
-      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
+      worker.address,
       "",
       mockContractHash
     );
+
+    expect(
+      workspace
+        .connect(worker)
+        .registerClient(
+          "metadataurl",
+          "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
+          "",
+          mockContractHash
+        )
+    ).to.revertedWith("550");
+
     const WORKER_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("WORKER_ROLE")
     );
     const CLIENT_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("CLIENT_ROLE")
     );
-    expect(
-      workspace.moderateTarget(
-        "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
-        WORKER_ROLE,
-        true
-      )
-    ).to.emit(workspace, "Moderated");
-    let disabledWorker = await workspace.workers(
-      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
+    expect(workspace.moderateTarget(worker.address, WORKER_ROLE, true)).to.emit(
+      workspace,
+      "Moderated"
     );
+    let disabledWorker = await workspace.workers(worker.address);
     expect(disabledWorker.disabled).to.be.true;
 
-    expect(
-      workspace.moderateTarget(
-        "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0",
-        CLIENT_ROLE,
-        true
-      )
-    ).to.emit(workspace, "Moderated");
-    let disabledClient = await workspace.clients(
-      "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"
+    expect(workspace.moderateTarget(client.address, CLIENT_ROLE, true)).to.emit(
+      workspace,
+      "Moderated"
     );
+    let disabledClient = await workspace.clients(client.address);
     expect(disabledClient.disabled).to.be.true;
     // now I just set them back
     expect(
-      workspace.moderateTarget(
-        "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
-        WORKER_ROLE,
-        false
-      )
+      workspace.moderateTarget(worker.address, WORKER_ROLE, false)
     ).to.emit(workspace, "Moderated");
-    let disabledWorker2 = await workspace.workers(
-      "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02"
-    );
+    let disabledWorker2 = await workspace.workers(worker.address);
     expect(disabledWorker2.disabled).to.be.false;
   });
 
