@@ -59,7 +59,7 @@ library WorkSpaceLib {
         address _factoryAddress
     ) external {
         require(_manager != address(0), "504");
-        require(_fee <= 1000 && _fee > 0,"Fee must be under or equal 1000 and bigger than zero");
+        require(_fee <= 4000 && _fee > 0,"Fee must be under or equal 4000 and bigger than zero");
         self.fee = _fee;
         self.metadataUrl = _metadataUrl;
         self.managerAddress = payable(_manager);
@@ -184,7 +184,7 @@ library WorkSpaceLib {
 
     // The manager can set the fee anytime
     function setFee(WorkSpaceState storage self, uint16 _fee) external {
-    require(_fee <= 1000 && _fee > 0,"Fee must be under or equal 1000 and bigger than zero");
+    require(_fee <= 4000 && _fee > 0,"Fee must be under or equal 4000 and bigger than zero");
         self.fee = _fee;
     }
 
