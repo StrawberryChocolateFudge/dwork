@@ -2,7 +2,7 @@
 pragma solidity 0.8.5;
 
 /*
-  dev comment: This interface defines the functions that 
+  @dev This interface defines the functions that 
   need to be included in a job contract. 
   All future Job libs must implement this interface, to be able to be used by the factory
   */

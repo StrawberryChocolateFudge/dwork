@@ -2,7 +2,7 @@
 pragma solidity 0.8.5;
 
 /*
-  dev comment: This interface defines the functions that 
+  @dev  This interface defines the functions that 
   need to be included in a workspace contract. 
   All future Workspace libs must implement this interface, to be able to be used by the factory
   */
