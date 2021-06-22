@@ -60,3 +60,5 @@ Errors
 546 : The work didn't start yet.
 547 : No dispute to resolve.
 548 : The work is not done, yet.
+549 : Only the manager or worker can sign up workers
+550 : Only the client and the manager can sign up workers
