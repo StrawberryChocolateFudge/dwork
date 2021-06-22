@@ -31,6 +31,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
 
     event JobLibraryVersion(uint256);
     event WorkSpaceLibraryVersion(uint256);
+    event DividendsLibraryVersion(uint);
     event ContractFeeChange(uint16);
     constructor(address _owner) {
         require(_owner != address(0), "500");
@@ -134,6 +135,10 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         returns (address)
     {
         return state.setJobLibraryAddress(_address);
+    }
+
+    function setDividendsLibraryAddress(address _address) external onlyRole(RoleLib.ADMIN_ROLE) returns (address){
+      return state.setDividendsLibraryAddress(_address);
     }
 
     function addressIsNew(address _address) external view returns (bool) {

@@ -29,7 +29,7 @@ library WorkSpaceFactoryLib {
 
     event JobLibraryVersion(uint);
     event WorkSpaceLibraryVersion(uint);
-
+    event DividendsLibraryVersion(uint);
     function getContractAddress(FactoryState storage self, address _key)
         public
         view
@@ -90,6 +90,16 @@ library WorkSpaceFactoryLib {
         }
         emit JobLibraryVersion(self.jobLibraryVersion);
         return self.jobLibraryAddress;
+    }
+
+    function setDividendsLibraryAddress(FactoryState storage self,address _address) external returns (address){
+        if(self.dividendsLibrary != _address){
+            self.dividendsLibrary = _address;
+            self.dividendsLibraryVersion += 1;
+        }
+        
+         emit DividendsLibraryVersion(self.dividendsLibraryVersion);
+        return self.dividendsLibrary;
     }
 
     function checkIfWorkSpaceIsOutdated(FactoryState storage self,address _manager ) external view returns (bool){
