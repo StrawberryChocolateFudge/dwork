@@ -299,7 +299,32 @@ describe("Job tests", async function () {
   });
 
   it("selfdestruct job", async function () {
-    throw "err";
+    //This is the self destruct scenario,
+    const {
+      workspace,
+      worker,
+      client,
+      owner: manager,
+      worker2,
+    } = await setUpJobTests();
+    const jobaddress = await workspace.clientjobs(client.address);
+    const job = await ethers.getContractAt("Job", jobaddress[0], client);
+    //self destruct can be called on all non-ready assignments!
+    await job.connect(client).addAssignment(false);
+    const tx = {
+      to: job.address,
+      value: ethers.utils.parseEther("1"),
+    };
+    await client.sendTransaction(tx);
+
+    await expect(await job.kill()).to.changeEtherBalances(
+      [job, client],
+      [ethers.utils.parseEther("-1"), ethers.utils.parseEther("1")]
+    );
+
+    expect(workspace.addWorker(job.address, worker.address)).to.be.revertedWith(
+      "551"
+    );
   });
 
   it("Job deprecation checking", async function () {
