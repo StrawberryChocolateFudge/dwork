@@ -59,7 +59,10 @@ library WorkSpaceLib {
         address _factoryAddress
     ) external {
         require(_manager != address(0), "504");
-        require(_fee <= 4000 && _fee > 0,"Fee must be under or equal 4000 and bigger than zero");
+        require(
+            _fee <= 4000 && _fee > 0,
+            "Fee must be under or equal 4000 and bigger than zero"
+        );
         self.fee = _fee;
         self.metadataUrl = _metadataUrl;
         self.managerAddress = payable(_manager);
@@ -184,7 +187,10 @@ library WorkSpaceLib {
 
     // The manager can set the fee anytime
     function setFee(WorkSpaceState storage self, uint16 _fee) external {
-    require(_fee <= 4000 && _fee > 0,"Fee must be under or equal 4000 and bigger than zero");
+        require(
+            _fee <= 4000 && _fee > 0,
+            "Fee must be under or equal 4000 and bigger than zero"
+        );
         self.fee = _fee;
     }
 
@@ -265,5 +271,36 @@ library WorkSpaceLib {
         returns (address[] memory, address[] memory)
     {
         return (self.workerAddresses, self.clientAddresses);
+    }
+
+    function verifyRegisterClient(
+        WorkSpaceState storage self,
+        address sender,
+        address clientAddress
+    ) external view {
+        if (self.managerAddress != sender) {
+            // If it's not the manager sending this transaction then the address has to be the sender
+            // It's because a manager can sign up other people.
+            require(clientAddress == sender, "550");
+        }
+        require(self.registrationOpen, "517");
+        require(self.clients[sender].initialized == false, "518");
+    }
+
+    function verifyRegisterWorker(
+        WorkSpaceState storage self,
+        address sender,
+        address workerAddress
+    ) external view {
+        if (self.managerAddress != sender) {
+            require(workerAddress == sender, "549");
+        }
+        require(self.registrationOpen, "513");
+        require(self.workers[sender].initialized == false, "514");
+    }
+
+    function verifyCreateJob(WorkSpaceState storage self,address sender) external view {
+        require(self.clients[sender].initialized == true, "507");
+        require(self.clients[sender].disabled == false, "508");
     }
 }

@@ -54,8 +54,7 @@ contract WorkSpace is
         override
         onlyRole(RoleLib.CLIENT_ROLE)
     {
-        require(state.clients[msg.sender].initialized == true, "507");
-        require(state.clients[msg.sender].disabled == false, "508");
+        state.verifyCreateJob(msg.sender);
         Job job =
             Job(
                 payable(
@@ -106,12 +105,7 @@ contract WorkSpace is
         bytes32 _writtenContractHash
     ) external returns (Worker memory) {
         require(hasRole(RoleLib.MANAGER_ROLE, workerAddress) == false, "512");
-        if (state.managerAddress != msg.sender) {
-            require(workerAddress == msg.sender,"549");
-        }
-        require(state.registrationOpen, "513");
-        require(state.workers[msg.sender].initialized == false, "514");
-
+        state.verifyRegisterWorker(msg.sender, workerAddress);
         state.registerWorker(
             _metadataUrl,
             workerAddress,
@@ -129,13 +123,7 @@ contract WorkSpace is
         bytes32 _writtenContractHash
     ) external returns (Client memory) {
         require(hasRole(RoleLib.MANAGER_ROLE, clientAddress) == false, "516");
-        if (state.managerAddress != msg.sender) {
-            // If it's not the manager sending this transaction then the address has to be the sender
-            // It's because a manager can sign up other people.
-            require(clientAddress == msg.sender,"550");
-        }
-        require(state.registrationOpen, "517");
-        require(state.clients[msg.sender].initialized == false, "518");
+        state.verifyRegisterClient(msg.sender, clientAddress);
         state.registerClient(
             _metadataUrl,
             clientAddress,
