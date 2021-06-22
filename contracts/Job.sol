@@ -48,21 +48,17 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         uint16 managementFee,
         address dividendsContract
     ) external override initializer() {
-        require(
-            verifier.checkFactoryBytecode(msg.sender),
-            "The caller is not a workspace"
+        require(verifier.checkFactoryBytecode(msg.sender), "523");
+        state.setStateForInit(
+            _workSpaceAddress,
+            _clientAddress,
+            _managerAddress,
+            metadataUrl,
+            version,
+            contractFee,
+            managementFee,
+            dividendsContract
         );
-        state.workspaceAddress = _workSpaceAddress;
-        state.clientAddress = _clientAddress;
-        state.created = block.timestamp;
-        state.disabled = false;
-        state.factoryAddress = msg.sender;
-        state.metadataUrl = metadataUrl;
-        state.version = version;
-        state.managementFee = managementFee;
-        state.contractFee = contractFee;
-        state.managerAddress = _managerAddress;
-        state.dividendsContract = dividendsContract;
         _setupRole(RoleLib.CLIENT_ROLE, _clientAddress);
         _setupRole(RoleLib.MANAGER_ROLE, _managerAddress);
         _setupRole(RoleLib.WORKSPACE, _workSpaceAddress);
@@ -75,7 +71,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         onlyRole(RoleLib.WORKSPACE)
         returns (bool)
     {
-        require(state.disabled == false, "The job is disabled");
+        require(state.disabled == false, "524");
         state.addWorker(workerAddress);
         _setupRole(RoleLib.WORKER_ROLE, workerAddress);
         //renouce the role of the previous worker if there was one
@@ -99,25 +95,16 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     }
 
     function startWork() external onlyRole(RoleLib.WORKER_ROLE) {
-        require(address(this).balance >= 1 ether, "Minimum balance is 1 ether");
+        require(address(this).balance >= 1 ether, "525");
         state.startWork();
     }
 
     function markDone() external onlyRole(RoleLib.WORKER_ROLE) {
-        state.markDone();
-        state.assignments[state.lastAssignment].finalPrice = address(this)
-            .balance;
-        emit WorkDone(
-            block.timestamp,
-            state.assignments[state.lastAssignment].finalPrice
-        );
+        state.markDone(address(this).balance);
     }
 
     function disputeRequested() external onlyRole(RoleLib.CLIENT_ROLE) {
-        require(
-            address(this).balance != 0,
-            "No need for dispute if there is no balance"
-        );
+        require(address(this).balance != 0, "526");
         state.disputeRequested();
     }
 
@@ -170,64 +157,22 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
                 hasRole(RoleLib.WORKER_ROLE, msg.sender),
             "509"
         );
-        require(
-            address(this).balance >=
-                state.assignments[state.lastAssignment].finalPrice,
-            "Insufficient balance in contract"
-        );
-        require(
-            !iszero(state.assignments[state.lastAssignment].finalPrice),
-            "The final price must not be zero to withdraw funds"
-        );
-        require(
-            iszero(state.assignments[state.lastAssignment].workerPayed),
-            "Already got payed"
-        );
-        require(
-            state.assignments[state.lastAssignment].accepted,
-            "You are not permitted to withdraw funds"
-        );
-        require(locked == false, "Not allowed");
+        state.verifyWithdraw(address(this).balance);
+        require(locked == false, "531");
         locked = true;
-        // factory fee can be max 1000, which is 10%
-        // management fee can be max 4000, which is 40%
-        //fee base is 10.000 which is the 100%
-        //The worker cannot get less than 50%
-        
-        uint256 contractFee = getActualContractFee();
-        uint256 managementFee = getActualManagementFee();
-        uint256 workerFee =
-            state.assignments[state.lastAssignment].finalPrice -
-                contractFee -
-                managementFee;
-        require(
-            contractFee + managementFee + workerFee ==
-                state.assignments[state.lastAssignment].finalPrice,
-            "oh noes the calculation went wrong"
-        );
-        state.assignments[state.lastAssignment].workerPayed = workerFee;
-        state.assignments[state.lastAssignment].managerPayed = managementFee;
-        state.assignments[state.lastAssignment].feePayed = contractFee;        
+
+        (uint256 workerFee, uint256 managementFee, uint256 contractFee) =
+            state.getFees();
 
         (bool workerPayedSuccess, ) =
             state.assignee[state.lastAssignee].call{value: workerFee}("");
-        require(
-            workerPayedSuccess,
-            "Unable to send value to worker, recipient may have reverted"
-        );
+        require(workerPayedSuccess, "533");
         (bool managerPayedSuccess, ) =
             payable(state.managerAddress).call{value: managementFee}("");
-        require(
-            managerPayedSuccess,
-            "Unable to send value manager, recipient may have reverted"
-        );
+        require(managerPayedSuccess, "534");
         (bool dividendsPayedSuccess, ) =
             payable(state.dividendsContract).call{value: contractFee}("");
-        require(
-            dividendsPayedSuccess,
-            "Unable to send value dividends, recipient may have reverted"
-        );
-       
+        require(dividendsPayedSuccess, "535");
 
         locked = false;
         emit Withdraw(
@@ -239,34 +184,14 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     }
 
     function refund() external onlyRole(RoleLib.CLIENT_ROLE) {
-        require(
-            state.assignments[state.lastAssignment].refundAllowed,
-            "Refund is not allowed"
-        );
-        require(locked == false, "Not allowed");
+        require(state.assignments[state.lastAssignment].refundAllowed, "536");
+        require(locked == false, "531");
         locked = true;
         //The refund sends all the balance to the client address
         (bool refundSuccess, ) =
             payable(state.clientAddress).call{value: address(this).balance}("");
-        require(
-            refundSuccess,
-            "Unable to refund the value, recipient may have reverted"
-        );
+        require(refundSuccess, "537");
         locked = false;
-    }
-
-    function getActualContractFee() internal view returns (uint256) {
-        return ((state.assignments[state.lastAssignment].finalPrice *
-            uint256(state.contractFee)) / uint256(JobLib.feeBase));
-    }
-
-    function getActualManagementFee() internal view returns (uint256) {
-        return ((state.assignments[state.lastAssignment].finalPrice *
-            uint256(state.managementFee)) / uint256(JobLib.feeBase));
-    }
-
-    function iszero(uint256 value) internal pure returns (bool) {
-        return value == 0;
     }
 
     receive() external payable {
@@ -285,22 +210,19 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
 
     function kill() external onlyRole(RoleLib.CLIENT_ROLE) {
         // the client can selfdestruct the contract if the state is "Not ready" for workers to work'.
-        require(
-            state.assignments[state.lastAssignment].ready != false,
-            "The last assignment must not be active"
-        );
+        require(state.assignments[state.lastAssignment].ready != false, "538");
         selfdestruct(payable(state.clientAddress));
     }
 
     function whoAmI() external view returns (string memory) {
         if (hasRole(RoleLib.MANAGER_ROLE, msg.sender)) {
-            return "manager";
+            return "201";
         } else if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
-            return "client";
+            return "202";
         } else if (hasRole(RoleLib.WORKER_ROLE, msg.sender)) {
-            return "worker";
+            return "203";
         } else {
-            return "not registered";
+            return "204";
         }
     }
 }

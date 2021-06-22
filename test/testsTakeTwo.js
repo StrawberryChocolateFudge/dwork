@@ -30,7 +30,7 @@ describe("Job tests", async function () {
 
     expect(
       workspace.connect(client).addWorker(clientJobs[0], worker2.address)
-    ).to.be.revertedWith("Disabled client cannot add worker");
+    ).to.be.revertedWith("522");
     //I remove the disabling
     expect(workspace.moderateTarget(client.address, CLIENT_ROLE, false))
       .to.emit(workspace, "Moderated")
@@ -71,11 +71,11 @@ describe("Job tests", async function () {
       .withArgs(job.address, worker.address);
     /// the worker starst work, cannot call other functions before
     expect(job.connect(worker).markDone()).to.be.reverted;
-    expect(await job.connect(worker).whoAmI()).to.equal("worker");
+    expect(await job.connect(worker).whoAmI()).to.equal("203");
     //enough ether must be deposited for the job to start
 
     expect(job.connect(worker).startWork()).to.be.revertedWith(
-      "Minimum balance is 1 ether"
+      "525"
     );
 
     const tx = {
@@ -98,7 +98,7 @@ describe("Job tests", async function () {
 
     //testing a require
     expect(workspace.addWorker(job.address, worker.address)).to.be.revertedWith(
-      "Cannot assign new worker if work has started"
+      "539"
     );
 
     //The job can be only accepted after its marked done
@@ -170,7 +170,7 @@ describe("Job tests", async function () {
     expect(job.connect(client).addAssignment(false))
       .to.emit(job, "AssignmentAdded")
       .withArgs(false);
-
+    
     expect(workspace.connect(client).addWorker(job.address, worker2.address))
       .to.emit(workspace, "AddedWorker")
       .withArgs(job.address, worker2.address);
@@ -182,9 +182,9 @@ describe("Job tests", async function () {
     
   });
 
-  // it("assignment with disputes", async function () {
-  //   throw "err";
-  // });
+  it("assignment with disputes", async function () {
+    throw "err";
+  });
 
   it("Job deprecation checking", async function () {
     const {

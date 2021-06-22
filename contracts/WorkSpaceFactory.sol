@@ -50,7 +50,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         //if upgrade is available, allow the creation of multiple workspaces
         //The creator will also pass if this is the first workspace he created
         require(state.checkIfWorkSpaceIsOutdated(msg.sender), "502");
-        require(_fee <= 100,"Fee cannot be more than 100");
+        require(_fee <= 100,"520");
         require(!state.disabled, "501");
         // Locking the create so a user can only create one at a time, no reentrancy
         require(createLocks[msg.sender] == false, "503");
@@ -111,7 +111,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         external
         onlyRole(RoleLib.ADMIN_ROLE)
     {
-        require(_newFee <= 1000,"Fee cannot be higher than 1000");
+        require(_newFee <= 1000,"521");
         state.contractFee = _newFee;
         emit ContractFeeChange(state.contractFee);
 

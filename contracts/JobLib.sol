@@ -36,7 +36,7 @@ struct Assignment {
     uint256 workerPayed; // The amount that was payed to the worker
     uint256 managerPayed; // The amount that was payed to the manager
     uint256 feePayed; // The amount that was payed to the dividends contract
-    uint256 refundPayed; // IF THE REFUND IS ALLOWED 
+    uint256 refundPayed; // IF THE REFUND IS ALLOWED
 }
 
 library JobLib {
@@ -45,29 +45,54 @@ library JobLib {
     event WorkStarted(uint256 date);
     event DisputeRequested(uint256 date);
     event AssignmentAccepted(uint256 date);
+    event WorkDone(uint256 date, uint256 value);
 
     uint16 constant feeBase = 10000;
+
+    function setStateForInit(
+        JobState storage self,
+        address _workSpaceAddress,
+        address _clientAddress,
+        address _managerAddress,
+        string calldata metadataUrl,
+        uint32 version,
+        uint16 contractFee,
+        uint16 managementFee,
+        address dividendsContract
+    ) external {
+        self.workspaceAddress = _workSpaceAddress;
+        self.clientAddress = _clientAddress;
+        self.created = block.timestamp;
+        self.disabled = false;
+        self.factoryAddress = msg.sender;
+        self.metadataUrl = metadataUrl;
+        self.version = version;
+        self.managementFee = managementFee;
+        self.contractFee = contractFee;
+        self.managerAddress = _managerAddress;
+        self.dividendsContract = dividendsContract;
+    }
 
     function addWorker(JobState storage self, address worker)
         external
         returns (bool)
     {
-        require(worker != address(0), "worker is the zero address");
+        require(worker != address(0), "511");
         require(
             self.assignments[self.lastAssignment].startedWork == false,
-            "Cannot assign new worker if work has started"
+            "539"
         );
         self.lastAssignee++;
         self.assignee[self.lastAssignee] = payable(worker);
         return true;
     }
 
-    function validatePayouts(JobState storage self,bool refundAllowed)
+    function validatePayouts(JobState storage self, bool refundAllowed)
         internal
         view
         returns (bool)
-    {   
-        if(refundAllowed) {
+    {
+        if (refundAllowed) {
             return true;
         }
         return
@@ -77,11 +102,14 @@ library JobLib {
     }
 
     function addAssignment(JobState storage self, bool ready) external {
-                
         if (self.assignments[self.lastAssignment].initialized) {
             require(
-                validatePayouts(self, self.assignments[self.lastAssignment].refundAllowed),
-                "The last assignment's payments must be done or a refund must be issued");
+                validatePayouts(
+                    self,
+                    self.assignments[self.lastAssignment].refundAllowed
+                ),
+                "540"
+            );
             // If the assignment is refunded, the client can decide to not withdraw his money,
             // he can instead create a new assignment and use the funds for that.
             // he can assign a new worker if the new assignment is submitted as not ready.
@@ -93,7 +121,7 @@ library JobLib {
             ready: ready,
             startedWork: false,
             done: false,
-            finalPrice : 0,
+            finalPrice: 0,
             disputeRequested: false,
             accepted: false,
             refundAllowed: false,
@@ -102,46 +130,35 @@ library JobLib {
             feePayed: 0,
             refundPayed: 0
         });
-
     }
 
     function markReady(JobState storage self) external {
-        require(
-            self.assignments[self.lastAssignment].initialized,
-            "The assignment doesn't exist"
-        );
+        require(self.assignments[self.lastAssignment].initialized, "541");
 
-        require(
-            self.assignments[self.lastAssignment].ready == false,
-            "The assignment is already ready"
-        );
+        require(self.assignments[self.lastAssignment].ready == false, "542");
         self.assignments[self.lastAssignment].ready = true;
         emit AssignmentReady(true);
     }
 
     function startWork(JobState storage self) external {
-        require(
-            self.assignments[self.lastAssignment].initialized,
-            "The assignment doesn't exist"
-        );
-        require(
-            self.assignments[self.lastAssignment].ready,
-            "The assignment is not ready yet"
-        );
+        require(self.assignments[self.lastAssignment].initialized, "543");
+        require(self.assignments[self.lastAssignment].ready, "544");
         require(
             self.assignments[self.lastAssignment].startedWork == false,
-            "The work started already"
+            "545"
         );
         self.assignments[self.lastAssignment].startedWork = true;
         emit WorkStarted(block.timestamp);
     }
 
-    function markDone(JobState storage self) external {
-        require(
-            self.assignments[self.lastAssignment].startedWork,
-            "The work didn't start yet."
-        );
+    function markDone(JobState storage self, uint256 balance) external {
+        require(self.assignments[self.lastAssignment].startedWork, "546");
         self.assignments[self.lastAssignment].done = true;
+        self.assignments[self.lastAssignment].finalPrice = balance;
+        emit WorkDone(
+            block.timestamp,
+            self.assignments[self.lastAssignment].finalPrice
+        );
     }
 
     function disputeRequested(JobState storage self) external {
@@ -152,10 +169,7 @@ library JobLib {
     function resolveDispute(JobState storage self, bool refundAllowed)
         external
     {
-        require(
-            self.assignments[self.lastAssignment].disputeRequested,
-            "No dispute to resolve"
-        );
+        require(self.assignments[self.lastAssignment].disputeRequested, "547");
         //The manager can turn off the dispute and decide to allow refund or not
         //if the refund is allowed, the dispute state persists
         self.assignments[self.lastAssignment].disputeRequested = refundAllowed;
@@ -163,12 +177,67 @@ library JobLib {
     }
 
     function markAccepted(JobState storage self) external {
-        require(
-            self.assignments[self.lastAssignment].done,
-            "The work is not done, yet."
-        );
+        require(self.assignments[self.lastAssignment].done, "548");
         self.assignments[self.lastAssignment].accepted = true;
         emit AssignmentAccepted(block.timestamp);
-
     }
+
+    function verifyWithdraw(JobState storage self, uint256 balance) external view {
+        require(
+            balance >=
+                self.assignments[self.lastAssignment].finalPrice,
+            "527"
+        );
+        require(
+            !iszero(self.assignments[self.lastAssignment].finalPrice),
+            "528"
+        );
+        require(
+            iszero(self.assignments[self.lastAssignment].workerPayed),
+            "529"
+        );
+        require(self.assignments[self.lastAssignment].accepted, "530");
+    }
+
+   function iszero(uint256 value) internal pure returns (bool) {
+        return value == 0;
+    }
+
+    function getFees(JobState storage self) external returns (uint256,uint256,uint256){
+         // factory fee can be max 1000, which is 10%
+        // management fee can be max 4000, which is 40%
+        //fee base is 10.000 which is the 100%
+        //The worker cannot get less than 50%
+
+        uint256 contractFee = getActualContractFee(self);
+        uint256 managementFee = getActualManagementFee(self);
+        uint256 workerFee =
+            self.assignments[self.lastAssignment].finalPrice -
+                contractFee -
+                managementFee;
+        require(
+            contractFee + managementFee + workerFee ==
+                self.assignments[self.lastAssignment].finalPrice,
+            "532"
+        );
+        self.assignments[self.lastAssignment].workerPayed = workerFee;
+        self.assignments[self.lastAssignment].managerPayed = managementFee;
+        self.assignments[self.lastAssignment].feePayed = contractFee;
+
+
+       return (workerFee,managementFee,contractFee);
+    }
+
+        function getActualContractFee(JobState storage self) internal view returns (uint256) {
+        return ((self.assignments[self.lastAssignment].finalPrice *
+            uint256(self.contractFee)) / uint256(JobLib.feeBase));
+    }
+
+    function getActualManagementFee(JobState storage self) internal view returns (uint256) {
+        return ((self.assignments[self.lastAssignment].finalPrice *
+            uint256(self.managementFee)) / uint256(JobLib.feeBase));
+    }
+
+
+
 }

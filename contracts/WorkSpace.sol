@@ -80,10 +80,9 @@ contract WorkSpace is
         );
 
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
-            //TODO: test this require condition!
             require(
                 !state.clients[msg.sender].disabled,
-                "Disabled client cannot add worker"
+                "522"
             );
         }
 
@@ -170,15 +169,15 @@ contract WorkSpace is
         state.setMetadata(_metadataUrl);
     }
 
-    function whoAmI() external view returns (string memory) {
+    function whoAmI() external view returns (uint) {
         if (hasRole(RoleLib.MANAGER_ROLE, msg.sender)) {
-            return "manager";
+            return 201;
         } else if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
-            return "client";
+            return 202;
         } else if (hasRole(RoleLib.WORKER_ROLE, msg.sender)) {
-            return "worker";
+            return 203;
         } else {
-            return "not registered";
+            return 204;
         }
     }
 

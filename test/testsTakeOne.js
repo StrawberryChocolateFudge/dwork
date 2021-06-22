@@ -77,7 +77,7 @@ describe("factory and workspace tests", async function () {
 
     expect(
       workspacefactory.connect(factoryBoss).setContractFee(1230)
-    ).to.be.revertedWith("Fee cannot be higher than 1000");
+    ).to.be.revertedWith("521");
    
     expect(
       workspacefactory.connect(factoryBoss).setContractFee(12)
@@ -196,7 +196,7 @@ describe("factory and workspace tests", async function () {
     await workspace.setRegistrationOpen(true);
 
     let myRole = await workspace.whoAmI();
-    expect(myRole).to.equal("manager");
+    expect(myRole).to.equal(201);
     let mockContractHash = await ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("test hash")
     );
