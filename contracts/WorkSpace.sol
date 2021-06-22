@@ -56,11 +56,10 @@ contract WorkSpace is
     {
         require(state.clients[msg.sender].initialized == true, "507");
         require(state.clients[msg.sender].disabled == false, "508");
-        WorkSpaceFactory factory = WorkSpaceFactory(state.factoryAddress);
         Job job =
             Job(
                 payable(
-                    factory.createJob(
+                    WorkSpaceFactory(state.factoryAddress).createJob(
                         msg.sender,
                         state.managerAddress,
                         _metadataUrl,
@@ -80,10 +79,7 @@ contract WorkSpace is
         );
 
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
-            require(
-                !state.clients[msg.sender].disabled,
-                "522"
-            );
+            require(!state.clients[msg.sender].disabled, "522");
         }
 
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
@@ -111,7 +107,7 @@ contract WorkSpace is
     ) external returns (Worker memory) {
         require(hasRole(RoleLib.MANAGER_ROLE, workerAddress) == false, "512");
         if (state.managerAddress != msg.sender) {
-            require(workerAddress == msg.sender);
+            require(workerAddress == msg.sender,"549");
         }
         require(state.registrationOpen, "513");
         require(state.workers[msg.sender].initialized == false, "514");
@@ -136,7 +132,7 @@ contract WorkSpace is
         if (state.managerAddress != msg.sender) {
             // If it's not the manager sending this transaction then the address has to be the sender
             // It's because a manager can sign up other people.
-            require(clientAddress == msg.sender);
+            require(clientAddress == msg.sender,"550");
         }
         require(state.registrationOpen, "517");
         require(state.clients[msg.sender].initialized == false, "518");
@@ -169,7 +165,7 @@ contract WorkSpace is
         state.setMetadata(_metadataUrl);
     }
 
-    function whoAmI() external view returns (uint) {
+    function whoAmI() external view returns (uint256) {
         if (hasRole(RoleLib.MANAGER_ROLE, msg.sender)) {
             return 201;
         } else if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
