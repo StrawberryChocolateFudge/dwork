@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.5;
+pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./Job.sol";
 import "./RoleLib.sol";
 import "./WorkSpaceLib.sol";
 import "./CloneFactory.sol";
-import "./Initializer.sol";
 import "./WorkSpaceFactory.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
@@ -54,6 +54,7 @@ contract WorkSpace is
         override
         onlyRole(RoleLib.CLIENT_ROLE)
     {
+        //TODO: maybe if the manager creates the jobs only, that is better ux
         state.verifyCreateJob(msg.sender);
         Job job =
             Job(
@@ -71,6 +72,8 @@ contract WorkSpace is
     }
 
     function addWorker(address to, address workerAddress) external override {
+        require(to != address(0), "500");
+        require(workerAddress != address(0), "500");
         require(
             hasRole(RoleLib.MANAGER_ROLE, msg.sender) ||
                 hasRole(RoleLib.CLIENT_ROLE, msg.sender),
@@ -139,6 +142,7 @@ contract WorkSpace is
         bytes32 target,
         bool setTo
     ) external onlyRole(RoleLib.MANAGER_ROLE) returns (bool) {
+        require(moderatedAddress != address(0),"500");
         return state.moderateTarget(moderatedAddress, target, setTo);
     }
 
