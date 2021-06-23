@@ -60,6 +60,19 @@ describe("dwork", async function () {
     expect(await dworktoken.balanceOf(holder2.address)).to.be.equal(
       parseEther("1")
     );
+
+    //Now owner will burn the tokens
+    expect(await dworktoken.totalSupply()).to.equal(parseEther("30000000"));
+
+    await expect(() =>
+      dworktoken.connect(owner).burn(parseEther("2000000"))
+    ).to.changeTokenBalance(dworktoken, owner, parseEther("-2000000"));
+
+    expect(await dworktoken.balanceOf(owner.address)).to.be.equal(
+      parseEther("8000000")
+    );
+
+    expect(await dworktoken.totalSupply()).to.equal(parseEther("28000000"));
   });
 
   it("dividends tests", async function () {
