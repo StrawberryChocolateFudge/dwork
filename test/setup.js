@@ -168,4 +168,30 @@ async function setUpJobTests() {
   };
 }
 
-module.exports = { setUp, addLibrariesAndWorkspace, setUpJobTests };
+async function tokenSetup() {
+  const [owner, holder1, holder2, holder3] = await ethers.getSigners();
+  //30 million tokens are minted, and sold at a rate of 2
+
+  const DWorkToken = await ethers.getContractFactory("DWorkToken");
+  const dWorkToken = await DWorkToken.deploy(
+    owner.address,
+    ethers.utils.parseEther("30000000")
+  );
+  const dworktoken = await dWorkToken.deployed();
+  let dworkcrowdsale;
+  await dWorkToken.deployed().then(async (dworktoken) => {
+    const DWorkCrowdSale = await ethers.getContractFactory("DWorkCrowdSale");
+    await DWorkCrowdSale.deploy(
+      10,
+      owner.address,
+      dworktoken.address,
+      owner.address
+    ).then(async (dWorkcrowdSale) => {
+      dworkcrowdsale = await dWorkcrowdSale.deployed();
+    });
+  });
+
+  return { dworktoken, dworkcrowdsale, holder1, holder2, holder3, owner };
+}
+
+module.exports = { setUp, addLibrariesAndWorkspace, setUpJobTests, tokenSetup };
