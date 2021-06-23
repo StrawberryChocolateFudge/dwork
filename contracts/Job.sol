@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.5;
+pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./WorkSpace.sol";
 import "./WorkSpaceFactory.sol";
 import "./RoleLib.sol";
 import "./JobLib.sol";
-import "./Initializer.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
 import "./IJob.sol";

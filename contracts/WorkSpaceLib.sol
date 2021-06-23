@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.5;
+pragma solidity 0.8.6;
 import "./Job.sol";
 import "./RoleLib.sol";
 struct WorkSpaceState {
@@ -279,6 +279,8 @@ library WorkSpaceLib {
         address sender,
         address clientAddress
     ) external view {
+        require(sender != address(0),"500");
+        require(clientAddress != address(0),"500");
         if (self.managerAddress != sender) {
             // If it's not the manager sending this transaction then the address has to be the sender
             // It's because a manager can sign up other people.
@@ -293,6 +295,8 @@ library WorkSpaceLib {
         address sender,
         address workerAddress
     ) external view {
+        require(sender != address(0),"500");
+        require(workerAddress != address(0),"500");
         if (self.managerAddress != sender) {
             require(workerAddress == sender, "549");
         }
@@ -303,6 +307,9 @@ library WorkSpaceLib {
     function verifyCreateJob(WorkSpaceState storage self,address sender) external view {
         require(self.clients[sender].initialized == true, "507");
         require(self.clients[sender].disabled == false, "508");
+            //TODO: maybe if the manager creates the jobs only, that is better ux
+
+    
     }
 
     function contractExists(address _contract) internal view returns (bool){

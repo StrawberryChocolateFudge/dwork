@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.5;
+pragma solidity 0.8.6;
 
 library RoleLib {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");

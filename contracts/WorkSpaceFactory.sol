@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.5;
+pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
@@ -12,6 +12,7 @@ import "./IJob.sol";
 
 
 import "hardhat/console.sol";
+//TODO: set owner function, revoke previous one and add new
 
 // The workspace factory is used to create and track WorkSpaces
 contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
@@ -93,6 +94,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         onlyRole(RoleLib.WORKSPACE)
         returns (address)
     {
+
         IJob job = IJob(payable(createClone(state.jobLibraryAddress)));
         job.initialize(
             msg.sender,
@@ -162,7 +164,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
     }
 
     function getOwner() external view returns (address) {
-        //TODO: CHANGE OWNER TO VOTE ON THE FUNCTION CALLS
+        //TODO: CHANGE OWNER, VOTE ON THE FUNCTION CALLS INSTEAD
         return state.getOwner();
     }
 
