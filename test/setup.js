@@ -4,7 +4,12 @@ const { expect } = require("chai");
 async function setUp() {
   const [owner, client, worker, worker2, factoryBoss] =
     await ethers.getSigners();
-
+  const DWorkToken = await ethers.getContractFactory("DWorkToken");
+  const dWorkToken = await DWorkToken.deploy(
+    owner.address,
+    ethers.utils.parseEther("30000000")
+  );
+  const dworktoken = await dWorkToken.deployed();
   const DividendsLib = await ethers.getContractFactory("DividendsLib");
   const dividendsLib = await DividendsLib.deploy();
   const dividendslib = await dividendsLib.deployed();
@@ -12,7 +17,7 @@ async function setUp() {
   const Dividends = await ethers.getContractFactory("Dividends", {
     libraries: { DividendsLib: dividendslib.address },
   });
-  const dividends_dep = await Dividends.deploy();
+  const dividends_dep = await Dividends.deploy(dworktoken.address,100);
   const dividends = await dividends_dep.deployed();
 
   const WorkSpaceFactoryLib = await ethers.getContractFactory(
@@ -194,4 +199,42 @@ async function tokenSetup() {
   return { dworktoken, dworkcrowdsale, holder1, holder2, holder3, owner };
 }
 
-module.exports = { setUp, addLibrariesAndWorkspace, setUpJobTests, tokenSetup };
+async function dividendsSetup() {
+  const { dworktoken, dworkcrowdsale, holder1, holder2, holder3, owner } =
+    await tokenSetup();
+  const DividendsLib = await ethers.getContractFactory("DividendsLib");
+  const dividendsLib = await DividendsLib.deploy();
+  const dividendslib = await dividendsLib.deployed();
+
+  const Dividends = await ethers.getContractFactory("Dividends", {
+    libraries: { DividendsLib: dividendslib.address },
+  });
+  //Lets make the cycle now 100 for easy testablility
+  const dividends_dep = await Dividends.deploy(dworktoken.address,100);
+  const dividends = await dividends_dep.deployed();
+
+  return { dworktoken, holder1, holder2, holder3, owner, dividends };
+}
+
+async function expectRevert(async_callback,errString) {
+  let throws = false;
+  let err = "";
+  try{
+    await async_callback()  
+  } catch(e){
+    throws = true;
+    err = e.message;
+  }
+  console.log(`${err.includes(errString)}`)
+  return {throws,correct: err.includes(errString)}
+}
+
+
+module.exports = {
+  setUp,
+  addLibrariesAndWorkspace,
+  setUpJobTests,
+  tokenSetup,
+  dividendsSetup,
+  expectRevert
+};
