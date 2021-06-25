@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // DLink is a standalone contract that just links an address with more addresses
 
 contract DLink{
-    mapping (bytes32 => address[]) workLink;
+    mapping (bytes32 => address[]) private workLink;
     // an address may update its own mapping, or it may delete from it
     
-    mapping(address =>uint) modifiedCounter;
+    mapping(address =>uint) private  modifiedCounter;
 
     function link(address[] memory workspaces) external returns (uint){
         

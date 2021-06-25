@@ -18,10 +18,10 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     event Claim(address sender, uint256 value, uint256 with);
     event TokenWithdraw(address recepient, uint256 value, uint256 index);
     event Reclaim(address claimer, uint256 value, uint256 with);
-    DividendsState state;
-    IERC20 _token;
+    DividendsState private state;
+    IERC20 private _token;
     //one cycle has 1 million blocks, after 1 million blocks the tokens can be redeemed or reinvested
-    uint256 _cycle;
+    uint256 private _cycle;
 
     //Users must be able to lock tokens and receive dividends
     //The dividends payout periods are calculated by block.number % 1.000.000 ,
@@ -59,8 +59,8 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     function _processReclaim(uint256 amount, address sender) internal {
         state.setNewBalance(sender, amount);
         uint256 payment = calculateDividends(amount);
-        Address.sendValue(payable(sender), payment);
         state.setCurrentBalance(payment, Change.Withdraw);
+        Address.sendValue(payable(sender), payment);
         emit Reclaim(msg.sender, payment, amount);
     }
 

@@ -27,10 +27,10 @@ contract WorkSpace is
     event AddedWorker(address to, address worker);
 
     using WorkSpaceLib for WorkSpaceState;
-    WorkSpaceState state;
+    WorkSpaceState private state;
 
     using FactoryContractVerifier for FactoryContractVerifierState;
-    FactoryContractVerifierState verifier;
+    FactoryContractVerifierState private verifier;
 
     function initialize(
         uint16 _fee,

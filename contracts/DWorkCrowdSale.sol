@@ -29,8 +29,8 @@ contract DWorkCrowdSale is Context, ReentrancyGuard, AccessControl {
     uint256 private _weiRaised;
 
     //Each address can only purchase 10.000 tokens maximum
-    uint256 constant maxPurchase = 10000 ether;
-    mapping(address => uint256) purchases;
+    uint256 constant private maxPurchase = 10000 ether;
+    mapping(address => uint256) private purchases;
 
     /**
      * Event for token purchase logging

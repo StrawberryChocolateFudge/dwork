@@ -34,10 +34,10 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
     event Refund(uint32 assignmentIndex, uint256 amount);
     event DisputeResolved(uint32 assignmentIndex,bool refund);
     using JobLib for JobState;
-    JobState state;
-    bool locked;
+    JobState private state;
+    bool private locked;
     using FactoryContractVerifier for FactoryContractVerifierState;
-    FactoryContractVerifierState verifier;
+    FactoryContractVerifierState private verifier;
 
     function initialize(
         address _workSpaceAddress,
