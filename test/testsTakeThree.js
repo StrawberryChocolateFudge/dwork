@@ -175,14 +175,14 @@ describe("dwork", async function () {
       .to.emit(dividends, "Claim")
       .withArgs(holder1.address, parseEther("0.000333"), parseEther("10"));
 
-    let { throws, correct } = await expectRevert(() =>
-      dividends.connect(holder1).reclaimDividends(1),
+    let { throws, correct } = await expectRevert(
+      () => dividends.connect(holder1).reclaimDividends(1),
       "The balance is still locked"
     );
-    expect(throws).to.be.true
+    expect(throws).to.be.true;
     expect(correct).to.equal(true);
 
-    //TODO: THIS BELLOW IS NOT THROWING!! WTF!
+    //THIS BELLOW WAS WORKING WEIRD
     await expect(
       dividends.connect(holder1).reclaimDividends(1)
     ).to.be.revertedWith("The balance is still locked");
@@ -206,6 +206,28 @@ describe("dwork", async function () {
     history = await dividends.connect(holder1).getHistory(2);
     expect(history.balance).to.be.equal(parseEther("10"));
     expect(history.state).to.equal(0);
+
+    //Im gonna test the withdraw difference function here
+    //I confirm the balance is 10
+
+    expect(await dworktoken.balanceOf(dividends.address)).to.be.equal(
+      parseEther("10")
+    );
+
+    // I send some extra tokens to the contract by "accident";
+
+    await expect(() =>
+      dworktoken.transfer(dividends.address, parseEther("1"))
+    ).to.changeTokenBalance(dworktoken, dividends, parseEther("1"));
+
+    expect(await dividends.getManagedTokens()).to.equal(parseEther("10"));
+
+    // the owner can reclaim the balance to an address
+
+    await expect(() =>
+      dividends.withdrawDifference(holder2.address)
+    ).to.changeTokenBalance(dworktoken, holder2, parseEther("1"));
+
   });
 });
 

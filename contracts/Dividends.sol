@@ -76,7 +76,6 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
         payment = calculatedValue / precision;
     }
 
-    //Abstract the requires to function call
     function withdrawToken(uint256 index) external nonReentrant {
         (bool valid, string memory err) = state.verify(
             index,
@@ -103,7 +102,6 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
         );
     }
 
-    //abstract requires to function call
     function reclaimDividends(uint256 index) external nonReentrant {
         (bool valid, string memory err) = state.verify(
             index,
@@ -126,11 +124,11 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
         returns (uint256 difference)
     {
         // I can recover if somebody sent extra tokens by accident
-        // without calling the getDividends function
+        // without them calling the getDividends function
         // This shouldn't happen often, hopefully never
         difference = _token.balanceOf(address(this)) - state.managedTokens;
         if (difference != 0) {
-            _token.safeTransferFrom(address(this), to, difference);
+            _token.safeTransfer(to, difference);
         }
     }
 
