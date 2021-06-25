@@ -1,25 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
-
+import "hardhat/console.sol";
 struct DividendsState {
     uint256 totalBalance; // The total balance deposited in the contract
-    mapping(address => mapping(uint256 => Balance)) balances;
+    uint256 currentBalance;
+    uint256 managedTokens; //The amount of tokens the contract manages.
+    //managedTokens can be used to calculate if somebody sent tokens here by accident
+    mapping(address => mapping(uint256 => Balance)) tokenBalances;
     // The token balances per cycle
     mapping(address => uint256) indexes;
 }
 
-enum BalanceState {Deposited,Reinvested,Withdrawn}
+enum BalanceState {
+    Deposited,
+    Reclaimed,
+    Withdrawn
+}
+enum Change {
+    Add,
+    Withdraw
+}
 
 struct Balance {
     bool initialized;
-    bool withdrawn;
-    BalanceState state; 
+    BalanceState state;
     uint256 atBlock; //at block is when the tokes are deposited
     uint256 balance; //how much tokens were deposited
 }
 
-//one cycle has 1 million blocks, after 1 million blocks the tokens can be redeemed or reinvested
-uint256 constant cycleBlocks = 1000000;
+uint256 constant precision = 1000000000; //The precision of dividends calculations, 9 decimals
 
 library DividendsLib {
     function setTotalBalance(DividendsState storage self, uint256 _balance)
@@ -34,24 +43,75 @@ library DividendsLib {
         uint256 balance
     ) external {
         self.indexes[sender] += 1;
-        self.balances[sender][self.indexes[sender]] = Balance({
-            initialized : true,
-            withdrawn : false,
+        self.tokenBalances[sender][self.indexes[sender]] = Balance({
+            initialized: true,
             atBlock: block.number,
             balance: balance,
-            state : BalanceState.Deposited
+            state: BalanceState.Deposited
         });
+    }
+
+   
+    function setCurrentBalance(
+        DividendsState storage self,
+        uint256 balance,
+        Change change
+    ) external returns (uint256 newBalance) {
+        if (change == Change.Add) {
+            newBalance = self.currentBalance + balance;
+            self.currentBalance = newBalance;
+        } else if (change == Change.Withdraw) {
+            newBalance = self.currentBalance - balance;
+            self.currentBalance = newBalance;
+        }
     }
 
     function isUnlocked(
         DividendsState storage self,
         uint256 index,
-        address sender
-    ) external view returns (bool) {
+        address sender,
+        uint256 cycle
+    ) internal view returns (bool) {
         require(index > 0, "Index cant be zero");
         require(index <= self.indexes[sender], "Index cannot be too high");
         // If the balance was deposited 1 million blocks ago, it can be unlocked
-        return
-            self.balances[sender][index].atBlock + cycleBlocks < block.number;
+        return self.tokenBalances[sender][index].atBlock + cycle < block.number;
+    }
+
+    function setManagedTokens(
+        DividendsState storage self,
+        uint256 amount,
+        Change change
+    ) external {
+        if (change == Change.Add) {
+            self.managedTokens += amount;
+        } else if (change == Change.Withdraw) {
+            self.managedTokens -= amount;
+        }
+    }
+
+    function verify(
+        DividendsState storage self,
+        uint256 index,
+        address sender,
+        uint256 _cycle
+    ) external view returns (bool, string memory) {
+        console.log("verify runs");
+        if (!self.tokenBalances[sender][index].initialized) {
+            return (false, "balance is not initialized");
+        }
+
+        if (self.tokenBalances[sender][index].state != BalanceState.Deposited) {
+            return (
+                false,
+                "balance state is not deposited, the funds might be already withdrawn"
+            );
+        }
+        if (!isUnlocked(self, index, sender, _cycle)) {
+            console.log("still locked");
+            return (false, "The balance is still locked");
+        }
+
+        return (true, "");
     }
 }
