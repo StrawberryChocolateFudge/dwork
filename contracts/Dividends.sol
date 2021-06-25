@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 
 contract Dividends is Initializable, ReentrancyGuard, Ownable {
     using SafeMath for uint256;
@@ -84,10 +83,7 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
             msg.sender,
             _cycle
         );
-        console.log(valid);
-        console.log(err);
         require(valid, err);
-        console.log("doesnt revert ");
         state.tokenBalances[msg.sender][index].state = BalanceState.Withdrawn;
 
         _token.safeTransfer(
@@ -114,8 +110,6 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
             msg.sender,
             _cycle
         );
-        console.log(valid);
-        console.log(err);
         require(valid, err);
         state.tokenBalances[msg.sender][index].state = BalanceState.Reclaimed;
         

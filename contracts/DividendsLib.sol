@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
-import "hardhat/console.sol";
 struct DividendsState {
     uint256 totalBalance; // The total balance deposited in the contract
     uint256 currentBalance;
@@ -96,7 +95,6 @@ library DividendsLib {
         address sender,
         uint256 _cycle
     ) external view returns (bool, string memory) {
-        console.log("verify runs");
         if (!self.tokenBalances[sender][index].initialized) {
             return (false, "balance is not initialized");
         }
@@ -108,7 +106,6 @@ library DividendsLib {
             );
         }
         if (!isUnlocked(self, index, sender, _cycle)) {
-            console.log("still locked");
             return (false, "The balance is still locked");
         }
 
