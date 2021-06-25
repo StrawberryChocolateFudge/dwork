@@ -7,4 +7,6 @@ library RoleLib {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 public constant CLIENT_ROLE = keccak256("CLIENT_ROLE");
     bytes32 public constant WORKSPACE = keccak256("WORKSPACE");
+    bytes32 public constant MAINTAINER = keccak256("MAINTAINER");
+
 }
