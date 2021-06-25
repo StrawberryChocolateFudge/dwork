@@ -17,7 +17,7 @@ async function setUp() {
   const Dividends = await ethers.getContractFactory("Dividends", {
     libraries: { DividendsLib: dividendslib.address },
   });
-  const dividends_dep = await Dividends.deploy(dworktoken.address,100);
+  const dividends_dep = await Dividends.deploy(dworktoken.address, 100);
   const dividends = await dividends_dep.deployed();
 
   const WorkSpaceFactoryLib = await ethers.getContractFactory(
@@ -210,25 +210,28 @@ async function dividendsSetup() {
     libraries: { DividendsLib: dividendslib.address },
   });
   //Lets make the cycle now 100 for easy testablility
-  const dividends_dep = await Dividends.deploy(dworktoken.address,100);
+  const dividends_dep = await Dividends.deploy(dworktoken.address, 100);
   const dividends = await dividends_dep.deployed();
 
   return { dworktoken, holder1, holder2, holder3, owner, dividends };
 }
 
-async function expectRevert(async_callback,errString) {
+async function expectRevert(async_callback, errString) {
   let throws = false;
   let err = "";
-  try{
-    await async_callback()  
-  } catch(e){
+  try {
+    await async_callback();
+  } catch (e) {
     throws = true;
     err = e.message;
   }
-  console.log(`${err.includes(errString)}`)
-  return {throws,correct: err.includes(errString)}
+  return {
+    throws,
+    correct: err.includes(
+      `VM Exception while processing transaction: reverted with reason string '${errString}'`
+    ),
+  };
 }
-
 
 module.exports = {
   setUp,
@@ -236,5 +239,5 @@ module.exports = {
   setUpJobTests,
   tokenSetup,
   dividendsSetup,
-  expectRevert
+  expectRevert,
 };
