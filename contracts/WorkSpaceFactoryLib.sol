@@ -9,7 +9,7 @@ struct FactoryState {
     mapping(address => uint32) currentIndex;
 
     uint32 amountOfWorkSpaces;
-    uint16 contractFee; //The fee can be maximum 100 and this is divided by 10 when its used as percentage. so 100 is 10%, 1 is 0.1%
+    uint16 contractFee; 
     bool disabled;
     address workSpaceLibraryAddress;
     address jobLibraryAddress;
