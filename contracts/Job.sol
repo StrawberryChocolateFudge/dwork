@@ -203,13 +203,6 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         emit Received(msg.sender, msg.value);
     }
 
-    fallback() external payable {
-        if (msg.value > 0) {
-            state.totalBalance += msg.value;
-        }
-        emit Received(msg.sender, msg.value);
-    }
-
     function kill() external onlyRole(RoleLib.CLIENT_ROLE) {
         // the client can selfdestruct the contract if the state is "Not ready" for workers to start work.
         require(state.assignments[state.lastAssignment].ready == false, "538");
