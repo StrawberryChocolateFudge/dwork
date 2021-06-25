@@ -30,7 +30,9 @@ struct Assignment {
     bool startedWork; // marked by the worker, if work started the client or manager cannot add a new worker
     bool done; // done is marked by the worker when he is finished
     uint256 finalPrice; //The final amount that is payed out, determined when the job is DONE
-    bool accepted; // marked by the client or the manager depending if there was a dispute and what was the result, when this is true, withdrawals can start to the worker
+    // accepted is marked by the client or the manager depending if there was a dispute and what was the result, 
+    //when this is true, the worker or manager can start withdrawing funds
+    bool accepted; 
     bool disputeRequested; //can be requested by the client to ask the manager to help him withdrawz his funds
     bool refundAllowed; //It can be refunded if the client requests a dispute
     uint256 workerPayed; // The amount that was payed to the worker
@@ -183,11 +185,16 @@ library JobLib {
         self.assignments[self.lastAssignment].accepted = true;
         emit AssignmentAccepted(block.timestamp);
     }
-
+    
+    //Maybe I move the verify function back into the contract
+    //TODO: move the verifys back into the contract, they are untestable
+    //I KNOW!! I MAKE verifyWithdraw return a boolean and use a single require in the contract
+    //I need to get the error code also,returns (bool,string memory)
     function verifyWithdraw(JobState storage self, uint256 balance)
         external
         view
     {
+        //TODO: these bellow 2 do nothing?
         require(
             balance >= self.assignments[self.lastAssignment].finalPrice,
             "527"
