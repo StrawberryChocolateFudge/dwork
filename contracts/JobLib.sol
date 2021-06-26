@@ -186,32 +186,44 @@ library JobLib {
         emit AssignmentAccepted(block.timestamp);
     }
     
-    //Maybe I move the verify function back into the contract
-    //TODO: move the verifys back into the contract, they are untestable
-    //I KNOW!! I MAKE verifyWithdraw return a boolean and use a single require in the contract
-    //I need to get the error code also,returns (bool,string memory)
     function verifyWithdraw(JobState storage self, uint256 balance)
         external
         view
+        returns (bool valid, string memory err)
     {
-        //TODO: these bellow 2 do nothing?
-        require(
-            balance >= self.assignments[self.lastAssignment].finalPrice,
-            "527"
-        );
-        require(
-            !iszero(self.assignments[self.lastAssignment].finalPrice),
-            "528"
-        );
-        require(
-            iszero(self.assignments[self.lastAssignment].workerPayed),
-            "529"
-        );
-        require(self.assignments[self.lastAssignment].accepted, "530");
+        valid = true;
+        err = "";
+        
+        // IF balance is NOT bigger or equal to the final price
+        if(NOT(balance >= self.assignments[self.lastAssignment].finalPrice)){
+          valid = false;
+          err = "527";
+        }
+        // If the final price is zero, we cannot withdraw.  
+        // Work can only start if minimum 1 eth is deposited so this probably never triggers
+        if(iszero(self.assignments[self.lastAssignment].finalPrice)){
+           valid = false;
+           err = "528";
+        }
+        
+        if(NOT(iszero(self.assignments[self.lastAssignment].workerPayed))){
+            // if the worker already got payed, error
+            valid = false;
+            err = "529";
+        }
+        if(NOT(self.assignments[self.lastAssignment].accepted)){
+            //If the job was not accepted
+            valid = false;
+            err = "530";
+        }
     }
 
     function iszero(uint256 value) internal pure returns (bool) {
         return value == 0;
+    }
+
+    function NOT(bool statement) internal pure returns (bool){
+        return !statement;
     }
 
     function getFees(JobState storage self)

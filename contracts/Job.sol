@@ -9,7 +9,7 @@ import "./RoleLib.sol";
 import "./JobLib.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
-import "./IJob.sol";
+import "./interfaces/IJob.sol";
 
 // import "hardhat/console.sol";
 
@@ -158,7 +158,8 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
                 hasRole(RoleLib.WORKER_ROLE, msg.sender),
             "509"
         );
-        state.verifyWithdraw(address(this).balance);
+        (bool valid,string memory err) = state.verifyWithdraw(address(this).balance);
+        require(valid,err);
         require(locked == false, "531");
         locked = true;
 
