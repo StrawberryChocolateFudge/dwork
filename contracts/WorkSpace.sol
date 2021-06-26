@@ -10,7 +10,7 @@ import "./CloneFactory.sol";
 import "./WorkSpaceFactory.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
-import "./IWorkSpace.sol";
+import "./interfaces/IWorkSpace.sol";
 import "hardhat/console.sol";
 
 contract WorkSpace is
@@ -54,7 +54,6 @@ contract WorkSpace is
         override
         onlyRole(RoleLib.CLIENT_ROLE)
     {
-        //TODO: maybe if the manager creates the jobs only, that is better ux
         state.verifyCreateJob(msg.sender);
         Job job =
             Job(
@@ -107,6 +106,7 @@ contract WorkSpace is
         string calldata inviteToken,
         bytes32 _writtenContractHash
     ) external returns (Worker memory) {
+        //TODO: require is not tested properly
         require(hasRole(RoleLib.MANAGER_ROLE, workerAddress) == false, "512");
         state.verifyRegisterWorker(msg.sender, workerAddress);
         state.registerWorker(
@@ -125,6 +125,7 @@ contract WorkSpace is
         string calldata inviteToken,
         bytes32 _writtenContractHash
     ) external returns (Client memory) {
+        //TODO: bellow reqire doesnt throw if commented out
         require(hasRole(RoleLib.MANAGER_ROLE, clientAddress) == false, "516");
         state.verifyRegisterClient(msg.sender, clientAddress);
         state.registerClient(
