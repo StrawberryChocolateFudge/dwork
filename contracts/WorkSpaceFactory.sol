@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./WorkSpace.sol";
 import "./RoleLib.sol";
@@ -10,12 +11,12 @@ import "./CloneFactory.sol";
 import "./IWorkSpace.sol";
 import "./IJob.sol";
 
-
 import "hardhat/console.sol";
-//TODO: set owner function, revoke previous one and add new
 
+//TODO: set owner function, revoke previous one and add new
+//TODO: refactor admin functions to use onlyOwner
 // The workspace factory is used to create and track WorkSpaces
-contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
+contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
     using WorkSpaceFactoryLib for FactoryState;
     FactoryState private state;
     mapping(address => bool) private createLocks;
@@ -32,33 +33,32 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
 
     event JobLibraryVersion(uint256);
     event WorkSpaceLibraryVersion(uint256);
-    event DividendsLibraryVersion(uint);
+    event DividendsLibraryVersion(uint256);
     event ContractFeeChange(uint16);
-    constructor(address _owner) {
-        require(_owner != address(0), "500");
-        state.owner = _owner;
-        _setupRole(RoleLib.ADMIN_ROLE, state.owner);
+
+    constructor() {
         state.disabled = false;
         state.contractFee = 0;
         state.jobLibraryVersion = 0;
         state.workSpaceLibraryVersion = 0;
     }
 
-    function createWorkSpace(uint8 _fee, string memory _metadata)
+    function createWorkSpace(uint16 _fee, string memory _metadata)
         external
         returns (address)
     {
         //if upgrade is available, allow the creation of multiple workspaces
         //The creator will also pass if this is the first workspace he created
         require(state.checkIfWorkSpaceIsOutdated(msg.sender), "502");
-        require(_fee <= 100,"520");
+        require(_fee <= 4000 && _fee > 0, "552");
         require(!state.disabled, "501");
         // Locking the create so a user can only create one at a time, no reentrancy
         require(createLocks[msg.sender] == false, "503");
         createLocks[msg.sender] = true;
         uint256 index;
-        IWorkSpace workSpace =
-            IWorkSpace(createClone(state.workSpaceLibraryAddress));
+        IWorkSpace workSpace = IWorkSpace(
+            createClone(state.workSpaceLibraryAddress)
+        );
 
         try
             workSpace.initialize(
@@ -89,12 +89,12 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         return state.workSpaces[msg.sender][index];
     }
 
-    function createJob(address _clientAddress, address _managerAddress,string calldata metadataUrl,uint16 managementFee)
-        external
-        onlyRole(RoleLib.WORKSPACE)
-        returns (address)
-    {
-
+    function createJob(
+        address _clientAddress,
+        address _managerAddress,
+        string calldata metadataUrl,
+        uint16 managementFee
+    ) external onlyRole(RoleLib.WORKSPACE) returns (address) {
         IJob job = IJob(payable(createClone(state.jobLibraryAddress)));
         job.initialize(
             msg.sender,
@@ -111,21 +111,20 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
 
     function setContractFee(uint16 _newFee)
         external
-        onlyRole(RoleLib.ADMIN_ROLE)
+        onlyOwner
     {
-        require(_newFee <= 1000,"521");
+        require(_newFee <= 1000, "521");
         state.contractFee = _newFee;
         emit ContractFeeChange(state.contractFee);
-
     }
 
-    function setDisabled(bool _disabled) external onlyRole(RoleLib.ADMIN_ROLE) {
+    function setDisabled(bool _disabled) external onlyOwner {
         state.disabled = _disabled;
     }
 
     function setWorkSpaceLibrary(address _address)
         external
-        onlyRole(RoleLib.ADMIN_ROLE)
+        onlyOwner
         returns (address)
     {
         return state.setWorkSpaceLibrary(_address);
@@ -133,14 +132,18 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
 
     function setJobLibraryAddress(address _address)
         external
-        onlyRole(RoleLib.ADMIN_ROLE)
+        onlyOwner
         returns (address)
     {
         return state.setJobLibraryAddress(_address);
     }
 
-    function setDividendsLibraryAddress(address _address) external onlyRole(RoleLib.ADMIN_ROLE) returns (address){
-      return state.setDividendsLibraryAddress(_address);
+    function setDividendsLibraryAddress(address _address)
+        external
+        onlyOwner
+        returns (address)
+    {
+        return state.setDividendsLibraryAddress(_address);
     }
 
     function addressIsNew(address _address) external view returns (bool) {
@@ -163,12 +166,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall {
         return state.getContractFee();
     }
 
-    function getOwner() external view returns (address) {
-        //TODO: CHANGE OWNER, VOTE ON THE FUNCTION CALLS INSTEAD
-        return state.getOwner();
-    }
-
-    function getWorkSpaceLibrary() external view returns (address) {
+      function getWorkSpaceLibrary() external view returns (address) {
         return state.workSpaceLibraryAddress;
     }
 

@@ -4,7 +4,6 @@ pragma solidity 0.8.6;
 import "./WorkSpace.sol";
 import "hardhat/console.sol";
 struct FactoryState {
-    address owner;
     mapping(address => mapping(uint => address)) workSpaces;
     mapping(address => uint32) currentIndex;
 
@@ -58,14 +57,6 @@ library WorkSpaceFactoryLib {
         returns (uint16)
     {
         return self.contractFee;
-    }
-
-    function getOwner(FactoryState storage self)
-        external
-        view
-        returns (address)
-    {
-        return self.owner;
     }
 
     function setWorkSpaceLibrary(FactoryState storage self, address _address)
