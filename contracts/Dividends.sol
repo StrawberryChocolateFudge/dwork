@@ -8,8 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/BoardCallableDividends.sol";
 
-contract Dividends is Initializable, ReentrancyGuard, Ownable {
+
+contract Dividends is Initializable, ReentrancyGuard, Ownable,BoardCallableDividends {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using DividendsLib for DividendsState;
@@ -117,7 +119,7 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     }
 
     function withdrawDifference(address to)
-        external
+        external override
         nonReentrant
         onlyOwner
         returns (uint256 difference)
