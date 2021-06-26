@@ -279,14 +279,18 @@ library WorkSpaceLib {
         address sender,
         address clientAddress
     ) external view {
+        //TODO: zero addresses are not tested
         require(sender != address(0),"500");
         require(clientAddress != address(0),"500");
+
         if (self.managerAddress != sender) {
             // If it's not the manager sending this transaction then the address has to be the sender
             // It's because a manager can sign up other people.
             require(clientAddress == sender, "550");
         }
+
         require(self.registrationOpen, "517");
+       
         require(self.clients[sender].initialized == false, "518");
     }
 
@@ -295,18 +299,24 @@ library WorkSpaceLib {
         address sender,
         address workerAddress
     ) external view {
+        //TODO: Zero address errors are not tested
         require(sender != address(0),"500");
         require(workerAddress != address(0),"500");
+        
         if (self.managerAddress != sender) {
             require(workerAddress == sender, "549");
         }
-        require(self.registrationOpen, "513");
+        //TODO THIS IS NOT TESTED :
+         require(self.registrationOpen, "513");
+        
+        //NOT TESTED:
         require(self.workers[sender].initialized == false, "514");
     }
 
-    function verifyCreateJob(WorkSpaceState storage self,address sender) external view {
-        require(self.clients[sender].initialized == true, "507");
-        require(self.clients[sender].disabled == false, "508");
+    function verifyCreateJob(WorkSpaceState storage self,address client) external view {
+       //TODO: MAYBE THESE ARE NOT TESTED,COMMENTING THEM DONT CAUSE TEST ERRORS
+        require(self.clients[client].initialized == true, "507");
+        require(self.clients[client].disabled == false, "508");
             //TODO: maybe if the manager creates the jobs only, that is better ux
 
     
