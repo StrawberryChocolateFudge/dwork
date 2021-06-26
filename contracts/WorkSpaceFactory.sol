@@ -8,15 +8,21 @@ import "./WorkSpace.sol";
 import "./RoleLib.sol";
 import "./WorkSpaceFactoryLib.sol";
 import "./CloneFactory.sol";
-import "./IWorkSpace.sol";
-import "./IJob.sol";
-
+import "./interfaces/IWorkSpace.sol";
+import "./interfaces/IJob.sol";
+import "./interfaces/BoardCallableFactory.sol";
 import "hardhat/console.sol";
 
 //TODO: set owner function, revoke previous one and add new
 //TODO: refactor admin functions to use onlyOwner
 // The workspace factory is used to create and track WorkSpaces
-contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
+contract WorkSpaceFactory is
+    BoardCallableFactory,
+    AccessControl,
+    CloneFactory,
+    Multicall,
+    Ownable
+{
     using WorkSpaceFactoryLib for FactoryState;
     FactoryState private state;
     mapping(address => bool) private createLocks;
@@ -109,21 +115,19 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
         return address(job);
     }
 
-    function setContractFee(uint16 _newFee)
-        external
-        onlyOwner
-    {
+    function setContractFee(uint16 _newFee) external override onlyOwner {
         require(_newFee <= 1000, "521");
         state.contractFee = _newFee;
         emit ContractFeeChange(state.contractFee);
     }
 
-    function setDisabled(bool _disabled) external onlyOwner {
+    function setDisabled(bool _disabled) external override onlyOwner {
         state.disabled = _disabled;
     }
 
     function setWorkSpaceLibrary(address _address)
         external
+        override
         onlyOwner
         returns (address)
     {
@@ -132,6 +136,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
 
     function setJobLibraryAddress(address _address)
         external
+        override
         onlyOwner
         returns (address)
     {
@@ -140,6 +145,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
 
     function setDividendsLibraryAddress(address _address)
         external
+        override
         onlyOwner
         returns (address)
     {
@@ -166,7 +172,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
         return state.getContractFee();
     }
 
-      function getWorkSpaceLibrary() external view returns (address) {
+    function getWorkSpaceLibrary() external view returns (address) {
         return state.workSpaceLibraryAddress;
     }
 
