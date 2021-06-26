@@ -24,8 +24,7 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     uint256 private _cycle;
 
     //Users must be able to lock tokens and receive dividends
-    //The dividends payout periods are calculated by block.number % 1.000.000 ,
-    //Tokens are unlockable after that period
+    //The dividends payout periods are calculated by bluck number when created + 1.000.000 ,
 
     constructor(IERC20 token_, uint256 cycle_) {
         _token = token_;
