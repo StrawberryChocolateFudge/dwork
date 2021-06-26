@@ -7,6 +7,8 @@ import "./BoardLib.sol";
 import "./WorkSpaceFactory.sol";
 import "./Dividends.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./interfaces/BoardCallableFactory.sol";
+import "./interfaces/BoardCallableDividends.sol";
 
 // The board is where the votings happen
 // There is a maintainer role used here that can create proposals for changing libraryUrls and disable the contract
@@ -30,12 +32,13 @@ contract Board is AccessControl {
     );
 
     event Vote(address voter, uint256 to, bool ticket, uint256 weight);
+    //TODO: More events!
 
     BoardState private state;
 
     IERC20 private _token;
-    WorkSpaceFactory private _factory;
-    Dividends private _dividends;
+    BoardCallableFactory private _factory;
+    BoardCallableDividends private _dividends;
     //I will have a contract level lock for some funtions
     //using integers cuz I read they are more cheap than bools
     uint256 lock;
@@ -254,10 +257,7 @@ contract Board is AccessControl {
                 "The identifier is not correct"
             );
             _factory.setDisabled(disableValue);
-        } else if (
-            state.proposals[index].maintenanceTask ==
-            MaintenanceTask.SETWORKSPACELIBRARY
-        ) {
+        } else {
             require(to != address(0), "Cannot be address zero");
             require(
                 state.proposals[index].identifier ==
@@ -268,54 +268,29 @@ contract Board is AccessControl {
                     ),
                 "The identifier is not correct"
             );
-
-            _factory.setWorkSpaceLibrary(to);
-        } else if (
-            state.proposals[index].maintenanceTask ==
-            MaintenanceTask.SETJOBLIBRARY
-        ) {
-            require(to != address(0), "Cannot be address zero");
-            require(
-                state.proposals[index].identifier ==
-                    getAddressSettingIdentifier(
-                        state.proposals[index].creator,
-                        to,
-                        state.proposals[index].topic
-                    ),
-                "The identifier is not correct"
-            );
-            _factory.setJobLibraryAddress(to);
-        } else if (
-            state.proposals[index].maintenanceTask ==
-            MaintenanceTask.SETDIVIDENDSLIBRARY
-        ) {
-            require(to != address(0), "Cannot be address zero");
-            require(
-                state.proposals[index].identifier ==
-                    getAddressSettingIdentifier(
-                        state.proposals[index].creator,
-                        to,
-                        state.proposals[index].topic
-                    ),
-                "The identifier is not correct"
-            );
-            _factory.setDividendsLibraryAddress(to);
-        } else if (
-            state.proposals[index].maintenanceTask ==
-            MaintenanceTask.WITHDRAWDIFFERENCE
-        ) {
-            require(to != address(0), "Cannot be address zero");
-            require(
-                state.proposals[index].identifier ==
-                    getAddressSettingIdentifier(
-                        state.proposals[index].creator,
-                        to,
-                        state.proposals[index].topic
-                    ),
-                "The identifier is not correct"
-            );
-            _dividends.withdrawDifference(to);
+            if (
+                state.proposals[index].maintenanceTask ==
+                MaintenanceTask.SETWORKSPACELIBRARY
+            ) {
+                _factory.setWorkSpaceLibrary(to);
+            } else if (
+                state.proposals[index].maintenanceTask ==
+                MaintenanceTask.SETJOBLIBRARY
+            ) {
+                _factory.setJobLibraryAddress(to);
+            } else if (
+                state.proposals[index].maintenanceTask ==
+                MaintenanceTask.SETDIVIDENDSLIBRARY
+            ) {
+                _factory.setDividendsLibraryAddress(to);
+            } else if (
+                state.proposals[index].maintenanceTask ==
+                MaintenanceTask.WITHDRAWDIFFERENCE
+            ) {
+                _dividends.withdrawDifference(to);
+            }
         }
+
         state.proposals[index].status = Status.FULFILLED;
         lock = 0;
     }
