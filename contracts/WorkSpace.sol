@@ -3,15 +3,15 @@ pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./Job.sol";
-import "./RoleLib.sol";
-import "./WorkSpaceLib.sol";
 import "./CloneFactory.sol";
 import "./WorkSpaceFactory.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
+import "./libraries/RoleLib.sol";
+import "./libraries/WorkSpaceLib.sol";
 import "./interfaces/IWorkSpace.sol";
-import "hardhat/console.sol";
+
 
 contract WorkSpace is
     IWorkSpace,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
-import "./Job.sol";
+import "../Job.sol";
 import "./RoleLib.sol";
 struct WorkSpaceState {
     uint16 fee; // This is the percentage the manager gets per job

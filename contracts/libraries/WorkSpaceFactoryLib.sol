@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./WorkSpace.sol";
-import "hardhat/console.sol";
+import "../WorkSpace.sol";
 struct FactoryState {
     mapping(address => mapping(uint => address)) workSpaces;
     mapping(address => uint32) currentIndex;

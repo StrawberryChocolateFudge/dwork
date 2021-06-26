@@ -5,16 +5,13 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./WorkSpace.sol";
-import "./RoleLib.sol";
-import "./WorkSpaceFactoryLib.sol";
 import "./CloneFactory.sol";
+import "./libraries/RoleLib.sol";
+import "./libraries/WorkSpaceFactoryLib.sol";
 import "./interfaces/IWorkSpace.sol";
 import "./interfaces/IJob.sol";
 import "./interfaces/BoardCallableFactory.sol";
-import "hardhat/console.sol";
 
-//TODO: set owner function, revoke previous one and add new
-//TODO: refactor admin functions to use onlyOwner
 // The workspace factory is used to create and track WorkSpaces
 contract WorkSpaceFactory is
     BoardCallableFactory,

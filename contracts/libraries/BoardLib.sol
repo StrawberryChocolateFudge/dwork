@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
-import "./DWorkToken.sol";
+import "../DWorkToken.sol";
 
 struct BoardState {
     uint256 lastIndex;

@@ -5,9 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./RoleLib.sol";
+import "./libraries/RoleLib.sol";
 
 //This is based on the openzeppelin crowdsale contract from 2.x
 contract DWorkCrowdSale is Context, ReentrancyGuard, AccessControl {
@@ -29,7 +28,7 @@ contract DWorkCrowdSale is Context, ReentrancyGuard, AccessControl {
     uint256 private _weiRaised;
 
     //Each address can only purchase 10.000 tokens maximum
-    uint256 constant private maxPurchase = 10000 ether;
+    uint256 private constant maxPurchase = 10000 ether;
     mapping(address => uint256) private purchases;
 
     /**
@@ -137,7 +136,7 @@ contract DWorkCrowdSale is Context, ReentrancyGuard, AccessControl {
         nonReentrant
         onlyRole(RoleLib.ADMIN_ROLE)
     {
-	//The admin can withdraw the tokens to any address
+        //The admin can withdraw the tokens to any address
         _token.safeTransfer(to, value);
         emit TokensWithdrawn(to, value);
     }

@@ -3,12 +3,12 @@ pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./WorkSpace.sol";
 import "./WorkSpaceFactory.sol";
-import "./RoleLib.sol";
-import "./JobLib.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./FactoryContractVerifier.sol";
+import "./libraries/RoleLib.sol";
+import "./libraries/JobLib.sol";
 import "./interfaces/IJob.sol";
 
 // import "hardhat/console.sol";
@@ -32,7 +32,7 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         uint256 usageFee
     );
     event Refund(uint32 assignmentIndex, uint256 amount);
-    event DisputeResolved(uint32 assignmentIndex,bool refund);
+    event DisputeResolved(uint32 assignmentIndex, bool refund);
     using JobLib for JobState;
     JobState private state;
     bool private locked;
@@ -158,22 +158,27 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
                 hasRole(RoleLib.WORKER_ROLE, msg.sender),
             "509"
         );
-        (bool valid,string memory err) = state.verifyWithdraw(address(this).balance);
-        require(valid,err);
+        (bool valid, string memory err) = state.verifyWithdraw(
+            address(this).balance
+        );
+        require(valid, err);
         require(locked == false, "531");
         locked = true;
 
-        (uint256 workerFee, uint256 managementFee, uint256 contractFee) =
-            state.getFees();
+        (uint256 workerFee, uint256 managementFee, uint256 contractFee) = state
+        .getFees();
 
-        (bool workerPayedSuccess, ) =
-            state.assignee[state.lastAssignee].call{value: workerFee}("");
+        (bool workerPayedSuccess, ) = state.assignee[state.lastAssignee].call{
+            value: workerFee
+        }("");
         require(workerPayedSuccess, "533");
-        (bool managerPayedSuccess, ) =
-            payable(state.managerAddress).call{value: managementFee}("");
+        (bool managerPayedSuccess, ) = payable(state.managerAddress).call{
+            value: managementFee
+        }("");
         require(managerPayedSuccess, "534");
-        (bool dividendsPayedSuccess, ) =
-            payable(state.dividendsContract).call{value: contractFee}("");
+        (bool dividendsPayedSuccess, ) = payable(state.dividendsContract).call{
+            value: contractFee
+        }("");
         require(dividendsPayedSuccess, "535");
 
         locked = false;
@@ -191,8 +196,9 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         locked = true;
         //The refund sends all the balance to the client address
         emit Refund(state.lastAssignment, address(this).balance);
-        (bool refundSuccess, ) =
-            payable(state.clientAddress).call{value: address(this).balance}("");
+        (bool refundSuccess, ) = payable(state.clientAddress).call{
+            value: address(this).balance
+        }("");
         require(refundSuccess, "537");
         locked = false;
     }
