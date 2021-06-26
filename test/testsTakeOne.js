@@ -30,19 +30,14 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Create workspace", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, factoryBoss } =
-      await setUp();
-    await workspacefactory
-      .connect(factoryBoss)
-      .setWorkSpaceLibrary(workspacemaster.address);
+    const { workspacefactory, workspacemaster, jobmaster } = await setUp();
+    await workspacefactory.setWorkSpaceLibrary(workspacemaster.address);
 
     expect(await workspacefactory.getWorkSpaceLibrary()).to.equal(
       workspacemaster.address
     );
 
-    await workspacefactory
-      .connect(factoryBoss)
-      .setJobLibraryAddress(jobmaster.address);
+    await workspacefactory.setJobLibraryAddress(jobmaster.address);
     expect(await workspacefactory.getJobLibraryAddress()).to.equal(
       jobmaster.address
     );
@@ -64,34 +59,32 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Contract fees", async function () {
-    const { workspacefactory, factoryBoss } = await setUp();
+    const { workspacefactory, owner, holder1 } = await setUp();
     let initialContractFee = await workspacefactory.getContractFee();
     expect(initialContractFee).to.be.equal(0);
-    expect(workspacefactory.setContractFee(123)).to.be.reverted;
-    let ownerAddress = await workspacefactory.getOwner();
-    expect(ownerAddress).to.be.equal(factoryBoss.address);
+    expect(workspacefactory.connect(holder1).setContractFee(123)).to.be
+      .reverted;
+    let ownerAddress = await workspacefactory.owner();
+    expect(ownerAddress).to.be.equal(owner.address);
     // the owner is the factoryboss so the bellow calls get rejected
 
-    expect(workspacefactory.setDisabled(true)).to.be.reverted;
-    expect(workspacefactory.setContractFee(1)).to.be.reverted;
+    expect(workspacefactory.connect(holder1).setDisabled(true)).to.be.reverted;
+    expect(workspacefactory.connect(holder1).setContractFee(1)).to.be.reverted;
 
-    expect(
-      workspacefactory.connect(factoryBoss).setContractFee(1230)
-    ).to.be.revertedWith("521");
+    expect(workspacefactory.setContractFee(1230)).to.be.revertedWith("521");
 
-    expect(workspacefactory.connect(factoryBoss).setContractFee(12))
+    expect(workspacefactory.setContractFee(12))
       .to.emit(workspacefactory, "ContractFeeChange")
       .withArgs(12);
   });
 
   it("Workspace metadata", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
+    const { workspacefactory, workspacemaster, jobmaster, owner } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
       jobmaster,
-      factoryBoss
     );
     let workspaceaddress = workspacefactory.getContractAddress(owner.address);
     const workspace = await ethers.getContractAt(
@@ -109,13 +102,12 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Registration disabling", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
+    const { workspacefactory, workspacemaster, jobmaster, owner } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster,
-      factoryBoss
+      jobmaster
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -134,13 +126,12 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Written contracts", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
+    const { workspacefactory, workspacemaster, jobmaster, owner } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster,
-      factoryBoss
+      jobmaster
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -174,13 +165,12 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Roles and registration", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
+    const { workspacefactory, workspacemaster, jobmaster, owner } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster,
-      factoryBoss
+      jobmaster
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -303,13 +293,12 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Workspace fees", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner, factoryBoss } =
+    const { workspacefactory, workspacemaster, jobmaster, owner } =
       await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster,
-      factoryBoss
+      jobmaster
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -335,15 +324,13 @@ describe("factory and workspace tests", async function () {
       workspacemaster,
       jobmaster,
       owner,
-      factoryBoss,
       worker,
       client,
     } = await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster,
-      factoryBoss
+      jobmaster
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -450,14 +437,12 @@ describe("factory and workspace tests", async function () {
       workspacemaster,
       jobmaster,
       owner,
-      client,
-      factoryBoss,
+      client
     } = await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster,
-      factoryBoss
+      jobmaster
     );
     let workspaceaddress = await workspacefactory.getContractAddress(
       owner.address
@@ -510,14 +495,12 @@ describe("factory and workspace tests", async function () {
       workspacemaster,
       jobmaster,
       owner,
-      client,
-      factoryBoss,
+      client
     } = await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster,
-      factoryBoss
+      jobmaster
     );
     let workspaceaddressOne = await workspacefactory.getContractAddress(
       owner.address
@@ -535,13 +518,11 @@ describe("factory and workspace tests", async function () {
     // I set the workspace to a new address, just to increase the index, this is not a valid contractaddr
     await expect(
       workspacefactory
-        .connect(factoryBoss)
-        .setWorkSpaceLibrary(factoryBoss.address)
+        .setWorkSpaceLibrary(owner.address)
     ).to.emit(workspacefactory, "WorkSpaceLibraryVersion");
     // just to increment the index
     await expect(
       workspacefactory
-        .connect(factoryBoss)
         .setWorkSpaceLibrary(workspacemaster.address)
     ).to.emit(workspacefactory, "WorkSpaceLibraryVersion");
     // //The next one sets it back

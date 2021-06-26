@@ -43,7 +43,7 @@ async function setUp() {
   const WorkSpaceFactory = await ethers.getContractFactory("WorkSpaceFactory", {
     libraries: { WorkSpaceFactoryLib: workspacefactorylib.address },
   });
-  const workSpaceFactory = await WorkSpaceFactory.deploy(factoryBoss.address);
+  const workSpaceFactory = await WorkSpaceFactory.deploy();
   const workspacefactory = await workSpaceFactory.deployed();
 
   const WorkSpace = await ethers.getContractFactory("WorkSpace", {
@@ -76,7 +76,6 @@ async function setUp() {
     owner,
     client,
     worker,
-    factoryBoss,
     worker2,
     dividends,
   };
@@ -85,15 +84,12 @@ async function setUp() {
 async function addLibrariesAndWorkspace(
   workspacefactory,
   workspace,
-  job,
-  factoryBoss
+  job
 ) {
   await workspacefactory
-    .connect(factoryBoss)
     .setWorkSpaceLibrary(workspace.address)
     .then(async () => {
       await workspacefactory
-        .connect(factoryBoss)
         .setJobLibraryAddress(job.address)
         .then(async () => {
           // I createa  workspace here for convenience
@@ -109,7 +105,6 @@ async function setUpJobTests() {
     jobmaster,
     owner,
     client,
-    factoryBoss,
     worker,
     worker2,
     dividends,
@@ -118,14 +113,12 @@ async function setUpJobTests() {
     workspacefactory,
     workspacemaster,
     jobmaster,
-    factoryBoss,
     dividends
   );
   //I set the fee to 1% here
-  workspacefactory.connect(factoryBoss).setContractFee(100);
+  workspacefactory.setContractFee(100);
   //I add the dividends library address now
   await workspacefactory
-    .connect(factoryBoss)
     .setDividendsLibraryAddress(dividends.address);
 
   let workspaceaddress = await workspacefactory.getContractAddress(
@@ -167,7 +160,6 @@ async function setUpJobTests() {
     worker,
     client,
     owner,
-    factoryBoss,
     workspacefactory,
     worker2,
   };

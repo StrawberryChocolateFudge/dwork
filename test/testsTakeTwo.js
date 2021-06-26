@@ -333,8 +333,7 @@ describe("Job tests", async function () {
       clientJobs,
       worker,
       client,
-      workspacefactory,
-      factoryBoss,
+      workspacefactory
     } = await setUpJobTests();
     let jobaddress = await workspace.clientjobs(client.address);
     const job = await ethers.getContractAt("Job", jobaddress[0], client);
@@ -345,8 +344,7 @@ describe("Job tests", async function () {
     //I can get the versions like above
     // and to trigger deprecation warning, I just set the lib address to something
     await workspacefactory
-      .connect(factoryBoss)
-      .setJobLibraryAddress(worker.address);
+       .setJobLibraryAddress(worker.address);
     const jobLibVersionAgain =
       await workspacefactory.getCurrentJobLibraryVersion();
     const jobInstanceVersionAgain = await job.getVersion();
