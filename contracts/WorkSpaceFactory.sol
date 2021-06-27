@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./WorkSpace.sol";
-import "./CloneFactory.sol";
+import "./libraries/CloneFactory.sol";
 import "./libraries/RoleLib.sol";
 import "./libraries/WorkSpaceFactoryLib.sol";
 import "./interfaces/IWorkSpace.sol";
