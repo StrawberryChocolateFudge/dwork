@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./libraries/RoleLib.sol";
 import "./libraries/BoardLib.sol";
 import "./WorkSpaceFactory.sol";
 import "./Dividends.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/BoardCallableFactory.sol";
 import "./interfaces/BoardCallableDividends.sol";
+import "hardhat/console.sol";
 
 // The board is where the votings happen
 // There is a maintainer role used here that can create proposals for changing libraryUrls and disable the contract
@@ -26,13 +27,21 @@ contract Board is AccessControl {
     event ProposalCreated(
         address creator,
         string metadataUrl,
-        bytes32 identifier,
         Topic topic,
         MaintenanceTask maintenanceTask
     );
 
     event Vote(address voter, uint256 to, bool ticket, uint256 weight);
-    //TODO: More events!
+    event VotingClosed(uint256 proposal, bool accepted);
+    event ProposalFulfilled(
+        uint256 proposal,
+        Topic topic,
+        MaintenanceTask task
+    );
+
+    //TODO: ADD BANNING FUNCTIONALITY.
+    //BAN FROM VOTING
+    //Maintainer shouild be able to disable proposals!
 
     BoardState private state;
 
@@ -46,19 +55,26 @@ contract Board is AccessControl {
     constructor(
         IERC20 token_,
         WorkSpaceFactory factory_,
-        address firstMaintainer
+        address firstMaintainer,
+        uint256 expiryTime,
+        uint256 rateLimit
     ) {
         _token = token_;
         _factory = factory_;
         state.maintainers[firstMaintainer] = true;
+        state.expiryTime = expiryTime;
+        state.rateLimit = rateLimit;
     }
 
-    //The identifier must be computed on the front end
+    //TODO: refactor to library more implementations!
     function createProposal(
         string calldata metadataUrl,
-        bytes32 identifier,
         Topic topic,
-        MaintenanceTask maintenanceTask
+        MaintenanceTask maintenanceTask,
+        uint16 setFeeTo,
+        address setMaintainerTo,
+        bool setDisabledTo,
+        address setAddressTo
     ) external {
         if (topic == Topic.MAINTENANCE) {
             require(
@@ -70,20 +86,18 @@ contract Board is AccessControl {
         }
         require(lock == 0, "Function is busy,try again later");
         lock = 1;
+
         state.createProposal(
             msg.sender,
             metadataUrl,
-            identifier,
             topic,
-            maintenanceTask
+            maintenanceTask,
+            setFeeTo,
+            setMaintainerTo,
+            setDisabledTo,
+            setAddressTo
         );
-        emit ProposalCreated(
-            msg.sender,
-            metadataUrl,
-            identifier,
-            topic,
-            maintenanceTask
-        );
+        emit ProposalCreated(msg.sender, metadataUrl, topic, maintenanceTask);
         lock = 0;
     }
 
@@ -99,27 +113,44 @@ contract Board is AccessControl {
         require(index > 0, "Cannot vote on zero index");
         require(index <= state.lastIndex, "Cannot vote on future proposals");
         require(
+            state.proposals[index].initialized,
+            "The proposal is not initialized"
+        );
+        require(
             state.proposals[index].status == Status.STARTED,
             "The proposal already closed"
         );
         require(
-            state.proposals[index].atBlock + expiryTime < block.number,
+            state.proposals[index].atBlock + state.expiryTime < block.number,
             "The proposal didnt expire,yet"
         );
+
         require(lock == 0, "Function is busy,try again later");
         lock = 1;
+
         //Count the votes weight and set the results
         if (state.votes[index][true] > state.votes[index][false]) {
             state.proposals[index].status = Status.ACCEPTED;
         } else {
             state.proposals[index].status = Status.REJECTED;
         }
+        if (state.proposals[index].topic != Topic.MAINTENANCE) {
+            // non-maintenance topics need a minimum of 3 votes,
+            if (state.proposals[index].voteCount <= 3) {
+                state.proposals[index].status = Status.REJECTED;
+            }
+        }
+
+        emit VotingClosed(
+            index,
+            state.votes[index][true] > state.votes[index][false]
+        );
         lock = 0;
     }
 
     // These accepted proposals can be fulfilled by anyone
     //  FEE_CHANGE
-    function fulfillFeeChangeProposal(uint256 index, uint16 newFee) external {
+    function fulfillFeeChangeProposal(uint256 index) external {
         require(
             state.proposals[index].topic == Topic.FEE_CHANGE,
             "Proposal must be Fee change"
@@ -128,56 +159,44 @@ contract Board is AccessControl {
             state.proposals[index].status == Status.ACCEPTED,
             "Proposal must be accepted"
         );
-        require(newFee <= 1000, "521");
         require(lock == 0, "Function is busy,try again later");
         lock = 1;
 
-        bytes32 identifier = getFeeChangeIdentifier(
-            state.proposals[index].creator,
-            newFee,
-            state.proposals[index].metadataUrl
-        );
-        require(
-            state.proposals[index].identifier == identifier,
-            "The identifiers don't match, you are calling the function with the wrong argument"
-        );
-
-        _factory.setContractFee(newFee);
-
+        _factory.setContractFee(state.proposals[index].setFeeTo);
+        emit ProposalFulfilled(index, Topic.FEE_CHANGE, MaintenanceTask.NONE);
         lock = 0;
     }
 
     // ELECT_MAINTAINER
     // REVOKE_MAINTAINER
-    function fulfillMaintainerChangeProposal(uint256 index, address maintainer)
-        external
-    {
+    function fulfillMaintainerChangeProposal(uint256 index) external {
         require(
             state.proposals[index].status == Status.ACCEPTED,
             "Proposal must be accepted"
         );
-        require(maintainer != address(0), "Maintainer address is zero address");
 
-        require(
-            state.proposals[index].identifier ==
-                getMaintainerChangeIdentifier(
-                    state.proposals[index].creator,
-                    maintainer,
-                    state.proposals[index].topic
-                ),
-            "Identifier is wrong"
-        );
         require(lock == 0, "Function is busy,try again later");
         lock = 1;
 
         if (state.proposals[index].topic == Topic.ELECT_MAINTAINER) {
-            state.maintainers[maintainer] = true;
+            state.maintainers[state.proposals[index].setMaintainerTo] = true;
+            emit ProposalFulfilled(
+                index,
+                Topic.ELECT_MAINTAINER,
+                MaintenanceTask.NONE
+            );
         } else if (state.proposals[index].topic == Topic.REVOKE_MAINTAINER) {
-            state.maintainers[maintainer] = false;
+            state.maintainers[state.proposals[index].setMaintainerTo] = false;
+            emit ProposalFulfilled(
+                index,
+                Topic.REVOKE_MAINTAINER,
+                MaintenanceTask.NONE
+            );
         } else {
             revert("The proposal is not maintainer management");
         }
         state.proposals[index].status = Status.FULFILLED;
+
         lock = 0;
     }
 
@@ -185,53 +204,36 @@ contract Board is AccessControl {
     function fulfillDevelopment(
         uint256 index,
         string calldata metadataUrl,
-        bytes32 identifier,
         Topic topic,
-        MaintenanceTask maintenanceTask
+        MaintenanceTask maintenanceTask,
+        bool setDisabledTo,
+        address setAddressTo
     ) external {
         require(state.isMaintainer(msg.sender), "You are not a maintainer");
         require(
             state.proposals[index].status == Status.ACCEPTED,
             "Proposal must be in accepted state"
         );
-        require(
-            state.proposals[index].identifier ==
-                getDevelopmentProposalIdentifier(
-                    state.proposals[index].creator,
-                    topic,
-                    state.proposals[index].metadataUrl,
-                    maintenanceTask
-                ),
-            "Identifier dont match"
-        );
-        //If the identifier match, the maintainer can mark this fulfilled and create a maintenance proposal
         require(lock == 0, "Function is busy,try again later");
         lock = 1;
         state.createProposal(
             msg.sender,
             metadataUrl,
-            identifier,
             topic,
-            maintenanceTask
+            maintenanceTask,
+            0,
+            address(0),
+            setDisabledTo,
+            setAddressTo
         );
-        emit ProposalCreated(
-            msg.sender,
-            metadataUrl,
-            identifier,
-            topic,
-            maintenanceTask
-        );
+        emit ProposalFulfilled(index, Topic.DEVELOPMENT, MaintenanceTask.NONE);
         lock = 0;
     }
 
     //Maintenance function evaluations will call external contract functions
     // disable value is used only if this is setDisabled, and address can be zero address in this case
 
-    function fulfillMaintenance(
-        uint256 index,
-        bool disableValue,
-        address to
-    ) external {
+    function fulfillMaintenance(uint256 index) external {
         require(state.isMaintainer(msg.sender), "You are not a maintainer");
         require(
             state.proposals[index].status == Status.ACCEPTED,
@@ -243,51 +245,65 @@ contract Board is AccessControl {
         );
         require(lock == 0, "Function is busy,try again later");
         lock = 1;
-        //TODO: REFACTOR TO REMOVE SUCH CODE REPETITION LIKE THE VALIDATION
         if (
             state.proposals[index].maintenanceTask ==
             MaintenanceTask.SETDISABLED
         ) {
-            require(
-                state.proposals[index].identifier ==
-                    getDisableFactoryIdentifier(
-                        state.proposals[index].creator,
-                        disableValue
-                    ),
-                "The identifier is not correct"
+            _factory.setDisabled(state.proposals[index].setDisabledTo);
+            emit ProposalFulfilled(
+                index,
+                Topic.MAINTENANCE,
+                MaintenanceTask.SETDISABLED
             );
-            _factory.setDisabled(disableValue);
         } else {
-            require(to != address(0), "Cannot be address zero");
-            require(
-                state.proposals[index].identifier ==
-                    getAddressSettingIdentifier(
-                        state.proposals[index].creator,
-                        to,
-                        state.proposals[index].topic
-                    ),
-                "The identifier is not correct"
-            );
             if (
                 state.proposals[index].maintenanceTask ==
                 MaintenanceTask.SETWORKSPACELIBRARY
             ) {
-                _factory.setWorkSpaceLibrary(to);
+                _factory.setWorkSpaceLibrary(
+                    state.proposals[index].setAddressTo
+                );
+                emit ProposalFulfilled(
+                    index,
+                    Topic.MAINTENANCE,
+                    MaintenanceTask.SETWORKSPACELIBRARY
+                );
             } else if (
                 state.proposals[index].maintenanceTask ==
                 MaintenanceTask.SETJOBLIBRARY
             ) {
-                _factory.setJobLibraryAddress(to);
+                _factory.setJobLibraryAddress(
+                    state.proposals[index].setAddressTo
+                );
+                emit ProposalFulfilled(
+                    index,
+                    Topic.MAINTENANCE,
+                    MaintenanceTask.SETJOBLIBRARY
+                );
             } else if (
                 state.proposals[index].maintenanceTask ==
                 MaintenanceTask.SETDIVIDENDSLIBRARY
             ) {
-                _factory.setDividendsLibraryAddress(to);
+                _factory.setDividendsLibraryAddress(
+                    state.proposals[index].setAddressTo
+                );
+                emit ProposalFulfilled(
+                    index,
+                    Topic.MAINTENANCE,
+                    MaintenanceTask.SETDIVIDENDSLIBRARY
+                );
             } else if (
                 state.proposals[index].maintenanceTask ==
                 MaintenanceTask.WITHDRAWDIFFERENCE
             ) {
-                _dividends.withdrawDifference(to);
+                _dividends.withdrawDifference(
+                    state.proposals[index].setAddressTo
+                );
+                emit ProposalFulfilled(
+                    index,
+                    Topic.MAINTENANCE,
+                    MaintenanceTask.WITHDRAWDIFFERENCE
+                );
             }
         }
 
@@ -297,55 +313,35 @@ contract Board is AccessControl {
 
     function hasEnoughShares(address sender) internal view returns (bool) {
         return
-            _token.balanceOf(sender) >
+            _token.balanceOf(sender) >=
             _token.totalSupply() / enoughSharesDivideBy;
     }
 
-    // The identifier hashing functions are available as public functions
-    // They are called internally but the front end can
-    // call them to get hash the identifier too
-    function getFeeChangeIdentifier(
-        address creator,
-        uint16 newFee,
-        string memory metadataUrl
-    ) public pure returns (bytes32 result) {
-        result = keccak256(abi.encodePacked(creator, newFee, metadataUrl));
+    function getLastProposalIndex() external view returns (uint256) {
+        return state.lastIndex;
     }
 
-    function getMaintainerChangeIdentifier(
-        address creator,
-        address maintainer,
-        Topic topic
-    ) public pure returns (bytes32 result) {
-        require(
-            topic == Topic.ELECT_MAINTAINER || topic == Topic.REVOKE_MAINTAINER,
-            "Wrong topic"
-        );
-        result = keccak256(abi.encodePacked(creator, maintainer, topic));
-    }
-
-    function getDisableFactoryIdentifier(address creator, bool _disabled)
-        public
-        pure
-        returns (bytes32 result)
+    function getProposals(uint256 index)
+        external
+        view
+        returns (Proposals memory)
     {
-        result = keccak256(abi.encodePacked(creator, _disabled));
+        return state.proposals[index];
     }
 
-    function getAddressSettingIdentifier(
-        address creator,
-        address to,
-        Topic topic
-    ) public pure returns (bytes32 result) {
-        result = keccak256(abi.encodePacked(creator, to, topic));
+    function getVotes(uint256 index) external view returns (uint256, uint256) {
+        return (state.votes[index][true], state.votes[index][false]);
     }
 
-    function getDevelopmentProposalIdentifier(
-        address creator,
-        Topic topic,
-        string memory metadataUrl,
-        MaintenanceTask task
-    ) public pure returns (bytes32 result) {
-        result = keccak256(abi.encodePacked(creator, topic, metadataUrl, task));
+    function votedAlready(uint256 index, address _voter)
+        external
+        view
+        returns (bool)
+    {
+        return state.votedAlready[index][_voter];
+    }
+
+    function isMaintainer(address address_) external view returns (bool) {
+        return state.maintainers[address_];
     }
 }
