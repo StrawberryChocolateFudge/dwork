@@ -2,8 +2,20 @@ const { ethers, waffle } = require("hardhat");
 const { expect } = require("chai");
 
 async function setUp() {
-  const [owner, client, worker, worker2, factoryBoss] =
-    await ethers.getSigners();
+  const [
+    owner,
+    client,
+    worker,
+    worker2,
+    maintainer,
+    holder1,
+    holder2,
+    holder3,
+    holder4,
+    holder5,
+    holder6,
+  ] = await ethers.getSigners();
+
   const DWorkToken = await ethers.getContractFactory("DWorkToken");
   const dWorkToken = await DWorkToken.deploy(
     owner.address,
@@ -68,6 +80,25 @@ async function setUp() {
   const dLink = await DLink.deploy();
   const dlink = await dLink.deployed();
 
+  const BoardLib = await ethers.getContractFactory("BoardLib");
+  const boardLib = await BoardLib.deploy();
+  const boardlib = await boardLib.deployed();
+
+  const Board = await ethers.getContractFactory("Board", {
+    libraries: {
+      BoardLib: boardlib.address,
+    },
+  });
+  //The first maintainer is the owner here
+  const boardDeploy = await Board.deploy(
+    dworktoken.address,
+    workspacefactory.address,
+    owner.address,
+    100, //only 100 blocks for a proposal to expire for testing purposes,
+    10 // blocks for rate limit 
+  );
+  const board = await boardDeploy.deployed();
+
   return {
     workspacefactory,
     workspacemaster: workspace,
@@ -78,14 +109,19 @@ async function setUp() {
     worker,
     worker2,
     dividends,
+    board,
+    dworktoken,
+    holder1,
+    holder2,
+    holder3,
+    holder4,
+    holder5,
+    holder6,
+    maintainer,
   };
 }
 
-async function addLibrariesAndWorkspace(
-  workspacefactory,
-  workspace,
-  job
-) {
+async function addLibrariesAndWorkspace(workspacefactory, workspace, job) {
   await workspacefactory
     .setWorkSpaceLibrary(workspace.address)
     .then(async () => {
@@ -118,8 +154,7 @@ async function setUpJobTests() {
   //I set the fee to 1% here
   workspacefactory.setContractFee(100);
   //I add the dividends library address now
-  await workspacefactory
-    .setDividendsLibraryAddress(dividends.address);
+  await workspacefactory.setDividendsLibraryAddress(dividends.address);
 
   let workspaceaddress = await workspacefactory.getContractAddress(
     owner.address
@@ -164,7 +199,7 @@ async function setUpJobTests() {
     worker2,
   };
 }
-
+//Dedicated setups for faster tests
 async function tokenSetup() {
   const [owner, holder1, holder2, holder3] = await ethers.getSigners();
   //30 million tokens are minted, and sold at a rate of 2
@@ -192,8 +227,7 @@ async function tokenSetup() {
 }
 
 async function dividendsSetup() {
-  const { dworktoken, dworkcrowdsale, holder1, holder2, holder3, owner } =
-    await tokenSetup();
+  const { dworktoken, holder1, holder2, holder3, owner } = await tokenSetup();
   const DividendsLib = await ethers.getContractFactory("DividendsLib");
   const dividendsLib = await DividendsLib.deploy();
   const dividendslib = await dividendsLib.deployed();
@@ -208,6 +242,9 @@ async function dividendsSetup() {
   return { dworktoken, holder1, holder2, holder3, owner, dividends };
 }
 
+//I don't like waffle .reverted and revertedWith..
+// they give false positives
+//So I roll my own revert checking, it does the check better when I  revert from external lib
 async function expectRevert(async_callback, errString) {
   let throws = false;
   let err = "";
