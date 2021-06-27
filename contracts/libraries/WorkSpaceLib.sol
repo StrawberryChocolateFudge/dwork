@@ -21,7 +21,6 @@ struct WorkSpaceState {
     mapping(address => Worker) workers;
     mapping(address => Client) clients;
     mapping(address => Job[]) clientjobs; // jobs are mapped to the clients address
-    //TODO: workerJobs
     mapping(address => Job[]) workerjobs;
     uint256 workSpaceVersion;
     // Managers cannot see workers and clients so easily without knowing the address.
