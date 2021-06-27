@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
-import "./WorkSpaceFactory.sol";
+import "../WorkSpaceFactory.sol";
 
 struct FactoryContractVerifierState {
     uint256 count;

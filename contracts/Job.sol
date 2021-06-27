@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./WorkSpace.sol";
 import "./WorkSpaceFactory.sol";
-import "./FactoryContractVerifier.sol";
+import "./libraries/FactoryContractVerifier.sol";
 import "./libraries/RoleLib.sol";
 import "./libraries/JobLib.sol";
 import "./interfaces/IJob.sol";
