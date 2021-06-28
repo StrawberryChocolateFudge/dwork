@@ -16,6 +16,8 @@ struct FactoryState {
     uint32 jobLibraryVersion;
     uint32 workSpaceLibraryVersion;
     uint32 dividendsLibraryVersion;
+    
+    address boardAddress;
 }
 
 library WorkSpaceFactoryLib {

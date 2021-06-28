@@ -5,12 +5,12 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./Job.sol";
-import "./CloneFactory.sol";
 import "./WorkSpaceFactory.sol";
 import "./libraries/FactoryContractVerifier.sol";
 import "./libraries/RoleLib.sol";
 import "./libraries/WorkSpaceLib.sol";
 import "./interfaces/IWorkSpace.sol";
+import "./libraries/CloneFactory.sol";
 
 
 contract WorkSpace is

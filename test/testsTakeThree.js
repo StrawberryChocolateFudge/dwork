@@ -229,7 +229,7 @@ describe("dwork", async function () {
     ).to.changeTokenBalance(dworktoken, holder2, parseEther("1"));
   });
 
-  it("The Board, Fee change and maintainer elect/revoke", async () => {
+  it("The Board, Fee change", async () => {
     const {
       board,
       workspacefactory,
@@ -246,16 +246,12 @@ describe("dwork", async function () {
     } = await setUp();
     // first thing I need to do is transfer ownership of the factory and dividends to the board
     //Im using less waffle here as it seem buggy sometimes
-    await workspacefactory.transferOwnership(board.address);
-    expect(await workspacefactory.owner()).to.equal(board.address);
-    await dividends.transferOwnership(board.address);
-    expect(await dividends.owner()).to.equal(board.address);
-
+    await workspacefactory.setBoardAddress(board.address);
+    expect(await workspacefactory.getBoardAddress()).to.equal(board.address);
     //Now I transfer around dwork token to have shareholders
     expect(await dworktoken.balanceOf(owner.address)).to.be.equal(
       parseEther("30000000")
     );
-
     await dworktoken.transfer(holder1.address, parseEther("10000"));
     await dworktoken.transfer(holder2.address, parseEther("100"));
     await dworktoken.transfer(holder3.address, parseEther("10"));
@@ -270,116 +266,21 @@ describe("dwork", async function () {
     expect(await dworktoken.balanceOf(holder2.address)).to.equal(
       parseEther("100")
     );
-    //the owner is the first maintainer
-    expect(await board.isMaintainer(owner.address)).to.be.true;
-
     //I try to create a proposal now, topic 2 is fee change
-    await expect(
-      board
-        .connect(holder2)
-        .createProposal(
-          "this is the metadata",
-          2,
-          0,
-          564,
-          "0x0000000000000000000000000000000000000000",
-          false,
-          "0x0000000000000000000000000000000000000000"
-        )
-    ).to.be.revertedWith("Must have enough shares");
+    await expect(board.connect(holder2).createProposal(232)).to.be.revertedWith(
+      "Must have enough shares"
+    );
     //THIS IS A FEE CHANGE PROPOSAL
-    await expect(
-      board
-        .connect(holder1)
-        .createProposal(
-          "this is the metadata",
-          2,
-          0,
-          564,
-          "0x0000000000000000000000000000000000000000",
-          false,
-          "0x0000000000000000000000000000000000000000"
-        )
-    )
+    await expect(board.connect(holder1).createProposal(353))
       .to.emit(board, "ProposalCreated")
-      .withArgs(holder1.address, "this is the metadata", 2, 0);
+      .withArgs(holder1.address, 353);
 
     expect(await board.getLastProposalIndex()).to.equal(1);
 
-    //THIS IS A ELECT MAINTAINER PROPOSAL
-    await expect(
-      board
-        .connect(holder4)
-        .createProposal(
-          "meta for elect",
-          3,
-          0,
-          0,
-          maintainer.address,
-          false,
-          "0x0000000000000000000000000000000000000000"
-        )
-    )
-      .to.emit(board, "ProposalCreated")
-      .withArgs(holder4.address, "meta for elect", 3, 0);
-
-    expect(await board.getLastProposalIndex()).to.equal(2);
-    //THIS IS A REVOKE MAINTAINER PROPOSAL, REMOVING THE OWNER
-    await expect(
-      board
-        .connect(holder5)
-        .createProposal(
-          "meta for revoke",
-          4,
-          0,
-          0,
-          owner.address,
-          false,
-          "0x0000000000000000000000000000000000000000"
-        )
-    )
-      .to.emit(board, "ProposalCreated")
-      .withArgs(holder5.address, "meta for revoke", 4, 0);
-
-    expect(await board.getLastProposalIndex()).to.equal(3);
-
-    //I will use this to revoke a previously added maintainer
-    await expect(
-      board
-        .connect(holder6)
-        .createProposal(
-          "meta for revoke maintainer",
-          4,
-          0,
-          0,
-          maintainer.address,
-          false,
-          "0x0000000000000000000000000000000000000000"
-        )
-    )
-      .to.emit(board, "ProposalCreated")
-      .withArgs(holder6.address, "meta for revoke maintainer", 4, 0);
-    expect(await board.getLastProposalIndex()).to.equal(4);
-
-    // // I need to  have a fee change that succeeds
-    await expect(
-      board.createProposal(
-        "this is the metadata",
-        2,
-        0,
-        230,
-        "0x0000000000000000000000000000000000000000",
-        false,
-        "0x0000000000000000000000000000000000000000"
-      )
-    )
-      .to.emit(board, "ProposalCreated")
-      .withArgs(owner.address, "this is the metadata", 2, 0);
-    expect(await board.getLastProposalIndex()).to.equal(5);
-
-    // NOW I WILL VOTE ON THE PROPOSALS
+    // // NOW I WILL VOTE ON THE PROPOSAL
 
     await expect(board.connect(holder1).vote(1, true)).to.be.reverted;
+
     await expect(board.connect(holder2).vote(1, true))
       .to.emit(board, "Vote")
       .withArgs(holder2.address, 1, true, parseEther("100"));
@@ -387,110 +288,37 @@ describe("dwork", async function () {
     await expect(board.connect(holder3).vote(1, true))
       .to.emit(board, "Vote")
       .withArgs(holder3.address, 1, true, parseEther("10"));
-
-    await expect(board.vote(1, false))
+    await expect(board.connect(holder4).vote(1, true))
       .to.emit(board, "Vote")
-      .withArgs(
-        owner.address,
-        1,
-        false,
-        await dworktoken.balanceOf(owner.address)
-      );
+      .withArgs(holder4.address, 1, true, parseEther("10000"));
 
-    // I can check the scores now before the voting is closed
+    // // I can check the scores now before the voting is closed
     let votes = await board.getVotes(1);
-    expect(utils.formatEther(votes[0])).to.be.equal("110.0");
-    expect(utils.formatEther(votes[1])).to.be.equal("29959890.0");
-    //As you can see the owners vote is worth a lot because of his token balance
+
+    expect(utils.formatEther(votes[0])).to.be.equal("10110.0");
+    expect(utils.formatEther(votes[1])).to.be.equal("0.0");
     await expect(board.closeVoting(1)).to.be.revertedWith(
       "The proposal didnt expire,yet"
     );
-
-    //Let's vote on other subjects too before I mine blocks
-    await expect(board.connect(holder1).vote(2, true)).to.emit(board, "Vote");
-    await expect(board.connect(holder2).vote(2, true)).to.emit(board, "Vote");
-    await expect(board.connect(holder3).vote(2, true)).to.emit(board, "Vote");
-    await expect(board.connect(maintainer).vote(2, false)).to.emit(
-      board,
-      "Vote"
-    );
-    //I have 3 votes with it and 1 vote against it
-
-    //The last proposal wants to revoke the maintainer right from the owner
-    await expect(board.connect(holder3).vote(3, false)).to.emit(board, "Vote");
-    await expect(board.connect(holder2).vote(3, false)).to.emit(board, "Vote");
-    //Only gets 2 votes
-
-    //This is for a succesful maintaner role revoking
-    await expect(board.connect(holder3).vote(4, true)).to.emit(board, "Vote");
-    await expect(board.connect(holder2).vote(4, true)).to.emit(board, "Vote");
-    await expect(board.connect(holder4).vote(4, true)).to.emit(board, "Vote");
-    await expect(board.connect(holder5).vote(4, true)).to.emit(board, "Vote");
-
-    //This is for a succesful fee change
-    await expect(board.connect(holder3).vote(5, true)).to.emit(board, "Vote");
-    await expect(board.connect(holder2).vote(5, true)).to.emit(board, "Vote");
-    await expect(board.connect(holder4).vote(5, true)).to.emit(board, "Vote");
-    await expect(board.connect(holder5).vote(5, true)).to.emit(board, "Vote");
-
-    //NOW I CAN MINE
+    // //NOW I CAN MINE
     await mineBlocks(120).then(async () => {
       //Anyone can close voting
 
-      //I expect the first proposal fails
       await expect(board.closeVoting(1))
         .to.emit(board, "VotingClosed")
-        .withArgs(1, false);
+        .withArgs(1, true);
       //the second passes
-      await expect(board.closeVoting(2))
-        .to.emit(board, "VotingClosed")
-        .withArgs(2, true);
-      // the third one fails
-      await expect(board.closeVoting(3))
-        .to.emit(board, "VotingClosed")
-        .withArgs(3, false);
 
-      //Now I can fulfill one proposal
-      await expect(board.fulfillFeeChangeProposal(1)).to.be.revertedWith(
-        "Proposal must be accepted"
-      );
-
-      await expect(board.fulfillMaintainerChangeProposal(2))
-        .to.emit(board, "ProposalFulfilled")
-        .withArgs(2, 3, 0);
-
-      //now the maintainer signer should be one too
-      await expect(await board.isMaintainer(maintainer.address)).to.be.true;
-
-      //I close voting four
-      await expect(board.closeVoting(4))
-        .to.emit(board, "VotingClosed")
-        .withArgs(4, true);
-
-      await expect(board.closeVoting(5))
-        .to.emit(board, "VotingClosed")
-        .withArgs(5, true);
-
-      await expect(board.fulfillMaintainerChangeProposal(4))
-        .to.emit(board, "ProposalFulfilled")
-        .withArgs(4, 4, 0);
-
-      //Now the maintainer is not a maintainer anymore, no no
-      await expect(await board.isMaintainer(maintainer.address)).to.be.false;
-
+      console.log(await board.getProposals(1));
       //And this will change the fee of the workspace factory!!
       //I didnt have any set
       expect(await workspacefactory.getContractFee()).to.be.equal(0);
-      await expect(board.fulfillFeeChangeProposal(5))
+      await expect(board.fulfillProposal(1))
         .to.emit(board, "ProposalFulfilled")
-        .withArgs(5, 2, 0);
+        .withArgs(1);
 
-      expect(await workspacefactory.getContractFee()).to.be.equal(230);
+      expect(await workspacefactory.getContractFee()).to.be.equal(353);
     });
-  });
-
-  it("the board,development and maintenance tasks", async () => {
-    throw "err";
   });
 
   // it("retesting all requires", async () => {

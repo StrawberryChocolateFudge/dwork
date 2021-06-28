@@ -93,7 +93,6 @@ async function setUp() {
   const boardDeploy = await Board.deploy(
     dworktoken.address,
     workspacefactory.address,
-    owner.address,
     100, //only 100 blocks for a proposal to expire for testing purposes,
     10 // blocks for rate limit 
   );

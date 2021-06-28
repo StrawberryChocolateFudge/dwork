@@ -10,16 +10,9 @@ import "./libraries/RoleLib.sol";
 import "./libraries/WorkSpaceFactoryLib.sol";
 import "./interfaces/IWorkSpace.sol";
 import "./interfaces/IJob.sol";
-import "./interfaces/BoardCallableFactory.sol";
 
 // The workspace factory is used to create and track WorkSpaces
-contract WorkSpaceFactory is
-    BoardCallableFactory,
-    AccessControl,
-    CloneFactory,
-    Multicall,
-    Ownable
-{
+contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
     using WorkSpaceFactoryLib for FactoryState;
     FactoryState private state;
     mapping(address => bool) private createLocks;
@@ -112,19 +105,23 @@ contract WorkSpaceFactory is
         return address(job);
     }
 
-    function setContractFee(uint16 _newFee) external override onlyOwner {
+    function setContractFee(uint16 _newFee) external {
         require(_newFee <= 1000, "521");
+        require(msg.sender == state.boardAddress, "only callable by the board");
         state.contractFee = _newFee;
         emit ContractFeeChange(state.contractFee);
     }
 
-    function setDisabled(bool _disabled) external override onlyOwner {
+    function setDisabled(bool _disabled) external onlyOwner {
         state.disabled = _disabled;
+    }
+
+    function setBoardAddress(address to) external onlyOwner {
+        state.boardAddress = to;
     }
 
     function setWorkSpaceLibrary(address _address)
         external
-        override
         onlyOwner
         returns (address)
     {
@@ -133,7 +130,6 @@ contract WorkSpaceFactory is
 
     function setJobLibraryAddress(address _address)
         external
-        override
         onlyOwner
         returns (address)
     {
@@ -142,7 +138,6 @@ contract WorkSpaceFactory is
 
     function setDividendsLibraryAddress(address _address)
         external
-        override
         onlyOwner
         returns (address)
     {
@@ -175,6 +170,10 @@ contract WorkSpaceFactory is
 
     function getJobLibraryAddress() external view returns (address) {
         return state.jobLibraryAddress;
+    }
+
+    function getBoardAddress() external view returns (address) {
+        return state.boardAddress;
     }
 
     function getCurrentWorkspaceIndex(address _manager)
