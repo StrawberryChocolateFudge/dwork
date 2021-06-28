@@ -12,7 +12,6 @@ import "./libraries/WorkSpaceLib.sol";
 import "./interfaces/IWorkSpace.sol";
 import "./libraries/CloneFactory.sol";
 
-
 contract WorkSpace is
     IWorkSpace,
     AccessControl,
@@ -49,23 +48,30 @@ contract WorkSpace is
         _setupRole(RoleLib.MANAGER_ROLE, _manager);
     }
 
-    function createJob(string calldata _metadataUrl)
+    function createJob(string calldata _metadataUrl, address client)
         external
         override
-        onlyRole(RoleLib.CLIENT_ROLE)
     {
-        state.verifyCreateJob(msg.sender);
-        Job job =
-            Job(
-                payable(
-                    WorkSpaceFactory(state.factoryAddress).createJob(
-                        msg.sender,
-                        state.managerAddress,
-                        _metadataUrl,
-                        state.fee
-                    )
+        require(
+            hasRole(RoleLib.MANAGER_ROLE, msg.sender) ||
+                hasRole(RoleLib.CLIENT_ROLE, msg.sender),
+            "509"
+        );
+        if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
+            require(client == msg.sender, "The client arg must be msg.sender");
+        }
+
+        state.verifyCreateJob(client);
+        Job job = Job(
+            payable(
+                WorkSpaceFactory(state.factoryAddress).createJob(
+                    client,
+                    state.managerAddress,
+                    _metadataUrl,
+                    state.fee
                 )
-            );
+            )
+        );
         state.clientjobs[msg.sender].push(job);
         emit JobCreated(address(job));
     }
@@ -143,7 +149,7 @@ contract WorkSpace is
         bytes32 target,
         bool setTo
     ) external onlyRole(RoleLib.MANAGER_ROLE) returns (bool) {
-        require(moderatedAddress != address(0),"500");
+        require(moderatedAddress != address(0), "500");
         return state.moderateTarget(moderatedAddress, target, setTo);
     }
 

@@ -22,7 +22,7 @@ interface IWorkSpace {
      The job creation function that calls the workspace inside it
      It must call factory.createJob
     */
-    function createJob(string calldata _metadataUrl) external;
+    function createJob(string calldata _metadataUrl,address client) external;
 
     /*
      addWorker must call the job to add a worker to it.

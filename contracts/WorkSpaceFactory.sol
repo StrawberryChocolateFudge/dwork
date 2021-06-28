@@ -32,9 +32,9 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
     event DividendsLibraryVersion(uint256);
     event ContractFeeChange(uint16);
 
-    constructor() {
+    constructor(uint16 fee) {
         state.disabled = false;
-        state.contractFee = 0;
+        state.contractFee = fee;
         state.jobLibraryVersion = 0;
         state.workSpaceLibraryVersion = 0;
     }

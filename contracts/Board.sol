@@ -7,7 +7,6 @@ import "./libraries/RoleLib.sol";
 import "./libraries/BoardLib.sol";
 import "./WorkSpaceFactory.sol";
 import "./Dividends.sol";
-import "hardhat/console.sol";
 
 // The board is where the votings happen
 // The hodlers of dwork token can vote to increate the fee the dividends contract collects

@@ -55,7 +55,7 @@ async function setUp() {
   const WorkSpaceFactory = await ethers.getContractFactory("WorkSpaceFactory", {
     libraries: { WorkSpaceFactoryLib: workspacefactorylib.address },
   });
-  const workSpaceFactory = await WorkSpaceFactory.deploy();
+  const workSpaceFactory = await WorkSpaceFactory.deploy(100);
   const workspacefactory = await workSpaceFactory.deployed();
 
   const WorkSpace = await ethers.getContractFactory("WorkSpace", {
@@ -151,8 +151,6 @@ async function setUpJobTests() {
     jobmaster,
     dividends
   );
-  //I set the fee to 1% here
-  workspacefactory.setContractFee(100);
   //I add the dividends library address now
   await workspacefactory.setDividendsLibraryAddress(dividends.address);
 
@@ -186,7 +184,7 @@ async function setUpJobTests() {
     "",
     mockContractHash
   );
-  workspace.connect(client).createJob("This is the metadata");
+  workspace.connect(client).createJob("This is the metadata",client.address);
   const clientJobs = await workspace.clientjobs(client.address);
 
   return {

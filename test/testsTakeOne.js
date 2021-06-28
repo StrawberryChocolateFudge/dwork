@@ -61,21 +61,17 @@ describe("factory and workspace tests", async function () {
   it("Contract fees", async function () {
     const { workspacefactory, owner, holder1 } = await setUp();
     let initialContractFee = await workspacefactory.getContractFee();
-    expect(initialContractFee).to.be.equal(0);
+    expect(initialContractFee).to.be.equal(100);
     expect(workspacefactory.connect(holder1).setContractFee(123)).to.be
       .reverted;
     let ownerAddress = await workspacefactory.owner();
     expect(ownerAddress).to.be.equal(owner.address);
-    // the owner is the factoryboss so the bellow calls get rejected
 
     expect(workspacefactory.connect(holder1).setDisabled(true)).to.be.reverted;
     expect(workspacefactory.connect(holder1).setContractFee(1)).to.be.reverted;
 
     expect(workspacefactory.setContractFee(1230)).to.be.revertedWith("521");
-
-    expect(workspacefactory.setContractFee(12))
-      .to.emit(workspacefactory, "ContractFeeChange")
-      .withArgs(12);
+    //set CONTRACT FEE NOW IS ONLY CALLABLE BY THE BOARD!
   });
 
   it("Workspace metadata", async function () {
@@ -84,7 +80,7 @@ describe("factory and workspace tests", async function () {
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
-      jobmaster,
+      jobmaster
     );
     let workspaceaddress = workspacefactory.getContractAddress(owner.address);
     const workspace = await ethers.getContractAt(
@@ -432,13 +428,8 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Client creates a job", async function () {
-    const {
-      workspacefactory,
-      workspacemaster,
-      jobmaster,
-      owner,
-      client
-    } = await setUp();
+    const { workspacefactory, workspacemaster, jobmaster, owner, client } =
+      await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
@@ -479,10 +470,11 @@ describe("factory and workspace tests", async function () {
       .reverted;
 
     await workspace.moderateTarget(client.address, CLIENT_ROLE, false);
-    expect(workspace.connect(client).createJob("This is the metadata")).to.emit(
-      workspace,
-      "JobCreated"
-    );
+    expect(
+      workspace
+        .connect(client)
+        .createJob("This is the metadata", client.address)
+    ).to.emit(workspace, "JobCreated");
     const clientJobs = await workspace.clientjobs(client.address);
     expect(clientJobs.length).to.equal(1);
   });
@@ -490,13 +482,8 @@ describe("factory and workspace tests", async function () {
   it("Workspace Deprecation checking", async function () {
     // I will create 2 workspaces and then check which one is deprecated from the order
     // This is useful if the users saved a dlink to a workspace, but the workspace got updated
-    const {
-      workspacefactory,
-      workspacemaster,
-      jobmaster,
-      owner,
-      client
-    } = await setUp();
+    const { workspacefactory, workspacemaster, jobmaster, owner, client } =
+      await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
@@ -516,14 +503,13 @@ describe("factory and workspace tests", async function () {
       .reverted;
 
     // I set the workspace to a new address, just to increase the index, this is not a valid contractaddr
-    await expect(
-      workspacefactory
-        .setWorkSpaceLibrary(owner.address)
-    ).to.emit(workspacefactory, "WorkSpaceLibraryVersion");
+    await expect(workspacefactory.setWorkSpaceLibrary(owner.address)).to.emit(
+      workspacefactory,
+      "WorkSpaceLibraryVersion"
+    );
     // just to increment the index
     await expect(
-      workspacefactory
-        .setWorkSpaceLibrary(workspacemaster.address)
+      workspacefactory.setWorkSpaceLibrary(workspacemaster.address)
     ).to.emit(workspacefactory, "WorkSpaceLibraryVersion");
     // //The next one sets it back
 
