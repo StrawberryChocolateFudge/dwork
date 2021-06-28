@@ -68,3 +68,32 @@ Errors
 554 : Client is already registered for something
 555 : Worker is not initialized
 556 : Client is not initialized
+557 : Only callable by the board
+558 : The client arg must be msg.sender if you are client
+//Crowdsale
+559 : Rate is zero
+560 : Wallet is zero address
+561 : Token is the zero address
+562 : Beneficiary is the zero address
+563 : WeiAmount is 0
+564 : Not enough balance
+565 : Index cant be zero
+566 : Index cant be too high
+567 : balance is not initialized
+568 : balance state is not deposited, the funds might be already withdrawn
+569 : The balance is still locked
+570 : Must have enough shares
+571 : Proposal must be accepted
+572 : You have to wait to make more propositions
+573 : The proposal is not initialized
+574 : The creator of the proposal cannot vote
+575 : Cannot vote on zero index
+576 : Cannot vote on future proposals
+577 : The proposal expired
+578 : Cant vote on closed proposals
+579 : The sender voted already
+580 : Cannot vote on zero index
+581 : Cannot vote on future proposals
+582 : The proposal is not initialized
+583 : The proposal already closed
+584 : The proposal didnt expire,yet

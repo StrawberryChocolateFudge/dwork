@@ -42,7 +42,7 @@ contract Board is AccessControl {
 
     function createProposal(uint16 setFeeTo) external {
         require(setFeeTo <= 1000, "521");
-        require(hasEnoughShares(msg.sender), "Must have enough shares");
+        require(hasEnoughShares(msg.sender), "570");
         state.createProposal(msg.sender, setFeeTo);
         emit ProposalCreated(msg.sender, setFeeTo);
     }
@@ -67,7 +67,7 @@ contract Board is AccessControl {
     function fulfillProposal(uint256 index) external {
         require(
             state.proposals[index].status == Status.ACCEPTED,
-            "Proposal must be accepted"
+            "571"
         );
         _factory.setContractFee(state.proposals[index].setFeeTo);
         emit ProposalFulfilled(index);

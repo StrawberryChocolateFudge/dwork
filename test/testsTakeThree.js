@@ -131,7 +131,7 @@ describe("dwork", async function () {
     //I cannot expect this because FU
     await expect(
       dividends.connect(holder1).withdrawToken(1)
-    ).to.be.revertedWith("The balance is still locked");
+    ).to.be.revertedWith("569");
 
     await mineBlocks(100).then(async () => {
       //After a hundred blocks, the withdraw should work
@@ -177,15 +177,14 @@ describe("dwork", async function () {
 
     let { throws, correct } = await expectRevert(
       () => dividends.connect(holder1).reclaimDividends(1),
-      "The balance is still locked"
+      "569"
     );
     expect(throws).to.be.true;
     expect(correct).to.equal(true);
 
-    //THIS BELLOW WAS WORKING WEIRD
     await expect(
       dividends.connect(holder1).reclaimDividends(1)
-    ).to.be.revertedWith("The balance is still locked");
+    ).to.be.revertedWith("569");
 
     await mineBlocks(100).then(async () => {
       //After a hundred blocks, the reclaim should work
@@ -278,7 +277,9 @@ describe("dwork", async function () {
     expect(await board.getLastProposalIndex()).to.equal(1);
 
     // // NOW I WILL VOTE ON THE PROPOSAL
-
+    await expect(board.connect(holder1).vote(4, true)).to.be.revertedWith(
+      "573"
+    );
     await expect(board.connect(holder1).vote(1, true)).to.be.reverted;
 
     await expect(board.connect(holder2).vote(1, true))
@@ -298,7 +299,7 @@ describe("dwork", async function () {
     expect(utils.formatEther(votes[0])).to.be.equal("10110.0");
     expect(utils.formatEther(votes[1])).to.be.equal("0.0");
     await expect(board.closeVoting(1)).to.be.revertedWith(
-      "The proposal didnt expire,yet"
+      "584"
     );
     // //NOW I CAN MINE
     await mineBlocks(120).then(async () => {

@@ -53,9 +53,9 @@ contract DWorkCrowdSale is Context, ReentrancyGuard, AccessControl {
         IERC20 token_,
         address admin
     ) {
-        require(rate_ > 0, "Rate is zero");
-        require(wallet_ != address(0), "Wallet is zero address");
-        require(address(token_) != address(0), "Token is the zero address");
+        require(rate_ > 0, "559");
+        require(wallet_ != address(0), "560");
+        require(address(token_) != address(0), "561");
         _rate = rate_;
         _wallet = wallet_;
         _token = token_;
@@ -101,8 +101,8 @@ contract DWorkCrowdSale is Context, ReentrancyGuard, AccessControl {
      */
     function buyTokens(address beneficiary) public payable nonReentrant {
         uint256 weiAmount = msg.value;
-        require(beneficiary != address(0), "Beneficiary is the zero address");
-        require(weiAmount != 0, "WeiAmount is 0");
+        require(beneficiary != address(0), "562");
+        require(weiAmount != 0, "563");
         // calculate token amount to be created
         uint256 tokens = _getTokenAmount(weiAmount);
 

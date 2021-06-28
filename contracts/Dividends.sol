@@ -47,7 +47,7 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     }
 
     function _processRequest(uint256 amount, address sender) internal {
-        require(_token.balanceOf(sender) >= amount, "Not enough balance");
+        require(_token.balanceOf(sender) >= amount, "564");
         state.setNewBalance(sender, amount);
         uint256 payment = calculateDividends(amount);
         _token.safeTransferFrom(sender, address(this), amount);

@@ -58,7 +58,7 @@ contract WorkSpace is
             "509"
         );
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
-            require(client == msg.sender, "The client arg must be msg.sender");
+            require(client == msg.sender, "558");
         }
 
         state.verifyCreateJob(client);

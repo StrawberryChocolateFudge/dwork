@@ -52,7 +52,7 @@ library BoardLib {
     ) external {
         require(
             self.propositionDate[creator] + self.rateLimit < block.number,
-            "You have to wait to make more propositions"
+            "571"
         );
 
         self.propositionDate[creator] = block.number;
@@ -86,43 +86,43 @@ library BoardLib {
     ) internal view {
         require(
             self.proposals[to].initialized,
-            "The proposal is not initialized"
+            "573"
         );
         require(
             self.proposals[to].creator != sender,
-            "The creator of the proposal cannot vote"
+            "574"
         );
-        require(to > 0, "Cannot vote on zero index");
-        require(to <= self.lastIndex, "Cannot vote on future proposals");
+        require(to > 0, "575");
+        require(to <= self.lastIndex, "576");
         require(
             self.proposals[to].atBlock + self.expiryTime > block.number,
-            "The proposal expired"
+            "577"
         );
 
         require(
             self.proposals[to].status == Status.STARTED,
-            "Cant vote on closed proposals"
+            "578"
         );
         require(
             self.votedAlready[to][sender] == false,
-            "The sender voted already"
+            "579"
         );
     }
 
     function closeVoting(BoardState storage self, uint256 index) external {
-        require(index > 0, "Cannot vote on zero index");
-        require(index <= self.lastIndex, "Cannot vote on future proposals");
+        require(index > 0, "580");
+        require(index <= self.lastIndex, "581");
         require(
             self.proposals[index].initialized,
-            "The proposal is not initialized"
+            "582"
         );
         require(
             self.proposals[index].status == Status.STARTED,
-            "The proposal already closed"
+            "583"
         );
         require(
             self.proposals[index].atBlock + self.expiryTime < block.number,
-            "The proposal didnt expire,yet"
+            "584"
         );
 
         //Count the votes weight and set the results

@@ -71,8 +71,8 @@ library DividendsLib {
         address sender,
         uint256 cycle
     ) internal view returns (bool) {
-        require(index > 0, "Index cant be zero");
-        require(index <= self.indexes[sender], "Index cannot be too high");
+        require(index > 0, "565");
+        require(index <= self.indexes[sender], "566");
         // If the balance was deposited 1 million blocks ago, it can be unlocked
         return self.tokenBalances[sender][index].atBlock + cycle < block.number;
     }
@@ -96,17 +96,17 @@ library DividendsLib {
         uint256 _cycle
     ) external view returns (bool, string memory) {
         if (!self.tokenBalances[sender][index].initialized) {
-            return (false, "balance is not initialized");
+            return (false, "567");
         }
 
         if (self.tokenBalances[sender][index].state != BalanceState.Deposited) {
             return (
                 false,
-                "balance state is not deposited, the funds might be already withdrawn"
+                "568"
             );
         }
         if (!isUnlocked(self, index, sender, _cycle)) {
-            return (false, "The balance is still locked");
+            return (false, "569");
         }
 
         return (true, "");

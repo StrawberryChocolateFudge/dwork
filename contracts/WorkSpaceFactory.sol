@@ -107,7 +107,7 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
 
     function setContractFee(uint16 _newFee) external {
         require(_newFee <= 1000, "521");
-        require(msg.sender == state.boardAddress, "only callable by the board");
+        require(msg.sender == state.boardAddress, "557");
         state.contractFee = _newFee;
         emit ContractFeeChange(state.contractFee);
     }

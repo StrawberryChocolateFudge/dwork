@@ -6,7 +6,7 @@ contract DWorkToken is ERC20 {
     event Burn(uint256 value, address burner);
 
     constructor(address to, uint256 initialSupply) ERC20("DWORK", "DWORK") {
-        require(to != address(0), "Address is zero address");
+        require(to != address(0), "500");
         _mint(to, initialSupply);
     }
 
