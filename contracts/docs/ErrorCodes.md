@@ -97,3 +97,4 @@ Errors
 582 : The proposal is not initialized
 583 : The proposal already closed
 584 : The proposal didnt expire,yet
+585 : In use. Try again

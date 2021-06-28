@@ -24,13 +24,18 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     //one cycle has 1 million blocks, after 1 million blocks the tokens can be redeemed or reinvested
     uint256 private _cycle;
 
+    //Im locking the reclaimDividends()
+    uint8 lock;
+
     //Users must be able to lock tokens and receive dividends
     //The dividends payout periods are calculated by bluck number when created + 1.000.000 ,
 
     constructor(IERC20 token_, uint256 cycle_) {
         _token = token_;
         _cycle = cycle_;
+        lock = 0;
     }
+
 
     receive() external payable {
         //The dividends is  ether, sent by Job contracts as fee
@@ -103,6 +108,8 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     }
 
     function reclaimDividends(uint256 index) external nonReentrant {
+        require(lock == 0,"585");
+        lock = 1;
         (bool valid, string memory err) = state.verify(
             index,
             msg.sender,
@@ -115,6 +122,7 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
             state.tokenBalances[msg.sender][index].balance,
             msg.sender
         );
+        lock = 0;
     }
 
     function withdrawDifference(address to)
