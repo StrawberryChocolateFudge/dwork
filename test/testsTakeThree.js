@@ -267,9 +267,9 @@ describe("dwork", async function () {
       parseEther("100")
     );
     //I try to create a proposal now, topic 2 is fee change
-    await expect(board.connect(holder2).createProposal(232)).to.be.revertedWith(
-      "Must have enough shares"
-    );
+    // await expect(board.connect(holder2).createProposal(232)).to.be.revertedWith(
+    //   "Must have enough shares"
+    // );
     //THIS IS A FEE CHANGE PROPOSAL
     await expect(board.connect(holder1).createProposal(353))
       .to.emit(board, "ProposalCreated")
@@ -308,10 +308,8 @@ describe("dwork", async function () {
         .to.emit(board, "VotingClosed")
         .withArgs(1, true);
       //the second passes
-
-      console.log(await board.getProposals(1));
       //And this will change the fee of the workspace factory!!
-      //I didnt have any set
+      //I didnt have any set before in this test
       expect(await workspacefactory.getContractFee()).to.be.equal(0);
       await expect(board.fulfillProposal(1))
         .to.emit(board, "ProposalFulfilled")

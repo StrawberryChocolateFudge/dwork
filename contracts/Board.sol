@@ -26,35 +26,26 @@ contract Board is AccessControl {
     IERC20 private _token;
 
     WorkSpaceFactory private _factory;
-    //I will have a contract level lock for some funtions
-    //using integers cuz I read they are more cheap than bools
-    uint256 lock;
 
     constructor(
         IERC20 token_,
         WorkSpaceFactory factory_,
         uint256 expiryTime,
-        uint256 rateLimit
+        uint256 rateLimit,
+        uint256 minimumShares
     ) {
         _token = token_;
         _factory = factory_;
         state.expiryTime = expiryTime;
         state.rateLimit = rateLimit;
+        state.minimumShares = minimumShares;
     }
 
-    //TODO: refactor to library more implementations!
-    //TODO: Maybe I could scrape the idea of maintainers , if the project goes well, maintenance should not be needed
     function createProposal(uint16 setFeeTo) external {
         require(setFeeTo <= 1000, "521");
-
         require(hasEnoughShares(msg.sender), "Must have enough shares");
-
-        require(lock == 0, "Function is busy,try again later");
-        lock = 1;
-
         state.createProposal(msg.sender, setFeeTo);
         emit ProposalCreated(msg.sender, setFeeTo);
-        lock = 0;
     }
 
     // Anyone holding dworktokens can vote, the amount of tokens he holds is the vote weigth
@@ -66,40 +57,11 @@ contract Board is AccessControl {
 
     // Anyone can close the voting, if it expired we got the results!
     function closeVoting(uint256 index) external {
-        require(index > 0, "Cannot vote on zero index");
-        require(index <= state.lastIndex, "Cannot vote on future proposals");
-        require(
-            state.proposals[index].initialized,
-            "The proposal is not initialized"
-        );
-        require(
-            state.proposals[index].status == Status.STARTED,
-            "The proposal already closed"
-        );
-        require(
-            state.proposals[index].atBlock + state.expiryTime < block.number,
-            "The proposal didnt expire,yet"
-        );
-
-        require(lock == 0, "Function is busy,try again later");
-        lock = 1;
-
-        //Count the votes weight and set the results
-        if (state.votes[index][true] > state.votes[index][false]) {
-            state.proposals[index].status = Status.ACCEPTED;
-        } else {
-            state.proposals[index].status = Status.REJECTED;
-        }
-
-        // need a minimum of 3 votes,
-        if (state.proposals[index].voteCount < 3) {
-            state.proposals[index].status = Status.REJECTED;
-        }
+        state.closeVoting(index);
         emit VotingClosed(
             index,
             state.votes[index][true] > state.votes[index][false]
         );
-        lock = 0;
     }
 
     // These accepted proposals can be fulfilled by anyone
@@ -108,18 +70,12 @@ contract Board is AccessControl {
             state.proposals[index].status == Status.ACCEPTED,
             "Proposal must be accepted"
         );
-        require(lock == 0, "Function is busy,try again later");
-        lock = 1;
-
         _factory.setContractFee(state.proposals[index].setFeeTo);
         emit ProposalFulfilled(index);
-        lock = 0;
     }
 
     function hasEnoughShares(address sender) internal view returns (bool) {
-        return
-            _token.balanceOf(sender) >=
-            _token.totalSupply() / enoughSharesDivideBy;
+        return _token.balanceOf(sender) >= state.minimumShares;
     }
 
     function getLastProposalIndex() external view returns (uint256) {

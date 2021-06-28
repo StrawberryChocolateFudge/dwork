@@ -94,7 +94,8 @@ async function setUp() {
     dworktoken.address,
     workspacefactory.address,
     100, //only 100 blocks for a proposal to expire for testing purposes,
-    10 // blocks for rate limit 
+    10, // blocks for rate limit
+    ethers.utils.parseEther("10000") //The minimum share the proposal creator has to have
   );
   const board = await boardDeploy.deployed();
 

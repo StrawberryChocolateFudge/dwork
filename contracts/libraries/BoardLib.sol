@@ -3,6 +3,8 @@ pragma solidity 0.8.6;
 import "../DWorkToken.sol";
 
 struct BoardState {
+    // the minimum shares for porposal creation
+    uint256 minimumShares;
     //The expiry time of a proposal in blocks
     uint256 expiryTime;
     //A lot of proposals must not be created by the same address, I have a rate limit
@@ -31,8 +33,6 @@ struct Proposals {
     Status status;
     uint16 setFeeTo;
 }
-
-uint256 constant enoughSharesDivideBy = 3000;
 
 // Status is used to determine if voting on the proposal has started and the result of the vote
 // A proposal has "started" as a default and based on the valuation, accepted or rejected.
@@ -74,6 +74,16 @@ library BoardLib {
         bool ticket,
         uint256 weight
     ) external {
+        verifyVote(self, to, sender);
+        self.votes[to][ticket] += weight;
+        self.proposals[to].voteCount += 1;
+    }
+
+    function verifyVote(
+        BoardState storage self,
+        uint256 to,
+        address sender
+    ) internal view {
         require(
             self.proposals[to].initialized,
             "The proposal is not initialized"
@@ -97,7 +107,34 @@ library BoardLib {
             self.votedAlready[to][sender] == false,
             "The sender voted already"
         );
-        self.votes[to][ticket] += weight;
-        self.proposals[to].voteCount += 1;
+    }
+
+    function closeVoting(BoardState storage self, uint256 index) external {
+        require(index > 0, "Cannot vote on zero index");
+        require(index <= self.lastIndex, "Cannot vote on future proposals");
+        require(
+            self.proposals[index].initialized,
+            "The proposal is not initialized"
+        );
+        require(
+            self.proposals[index].status == Status.STARTED,
+            "The proposal already closed"
+        );
+        require(
+            self.proposals[index].atBlock + self.expiryTime < block.number,
+            "The proposal didnt expire,yet"
+        );
+
+        //Count the votes weight and set the results
+        if (self.votes[index][true] > self.votes[index][false]) {
+            self.proposals[index].status = Status.ACCEPTED;
+        } else {
+            self.proposals[index].status = Status.REJECTED;
+        }
+
+        // need a minimum of 3 votes,
+        if (self.proposals[index].voteCount < 3) {
+            self.proposals[index].status = Status.REJECTED;
+        }
     }
 }
