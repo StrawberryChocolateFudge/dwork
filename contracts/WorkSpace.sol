@@ -72,7 +72,7 @@ contract WorkSpace is
                 )
             )
         );
-        state.clientjobs[msg.sender].push(job);
+        state.clientjobs[client].push(job);
         emit JobCreated(address(job));
     }
 

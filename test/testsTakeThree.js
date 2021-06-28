@@ -309,7 +309,6 @@ describe("dwork", async function () {
         .withArgs(1, true);
       //the second passes
       //And this will change the fee of the workspace factory!!
-      //I didnt have any set before in this test
       expect(await workspacefactory.getContractFee()).to.be.equal(100);
       await expect(board.fulfillProposal(1))
         .to.emit(board, "ProposalFulfilled")
