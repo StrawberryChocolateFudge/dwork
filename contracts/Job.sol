@@ -72,7 +72,6 @@ contract Job is IJob, AccessControl, Initializable, Multicall {
         onlyRole(RoleLib.WORKSPACE)
         returns (bool)
     {
-        require(state.disabled == false, "524");
         state.addWorker(workerAddress);
         _setupRole(RoleLib.WORKER_ROLE, workerAddress);
         //renouce the role of the previous worker if there was one

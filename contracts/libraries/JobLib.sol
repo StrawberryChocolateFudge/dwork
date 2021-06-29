@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
-import "hardhat/console.sol";
 
 struct JobState {
     address factoryAddress; // The address of the factory,to get the fees
@@ -10,7 +9,6 @@ struct JobState {
     address dividendsContract;
     address managerAddress;
     uint256 created;
-    bool disabled;
     //There is only one assignment active at a time, the last
     mapping(uint32 => Assignment) assignments;
     uint32 lastAssignment;
@@ -66,7 +64,6 @@ library JobLib {
         self.workspaceAddress = _workSpaceAddress;
         self.clientAddress = _clientAddress;
         self.created = block.timestamp;
-        self.disabled = false;
         self.factoryAddress = msg.sender;
         self.metadataUrl = metadataUrl;
         self.version = version;
@@ -80,7 +77,6 @@ library JobLib {
         external
         returns (bool)
     {
-        require(worker != address(0), "511");
         require(
             self.assignments[self.lastAssignment].startedWork == false,
             "539"
@@ -193,7 +189,7 @@ library JobLib {
     {
         valid = true;
         err = "";
-        
+        //These 2 errors bellow maybe cannot occur but I leave the checks
         // IF balance is NOT bigger or equal to the final price
         if(NOT(balance >= self.assignments[self.lastAssignment].finalPrice)){
           valid = false;

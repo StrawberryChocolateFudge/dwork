@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 import "../DWorkToken.sol";
-
 struct BoardState {
     // the minimum shares for porposal creation
     uint256 minimumShares;
@@ -75,6 +74,7 @@ library BoardLib {
         uint256 weight
     ) external {
         verifyVote(self, to, sender);
+        self.votedAlready[to][sender] = true;
         self.votes[to][ticket] += weight;
         self.proposals[to].voteCount += 1;
     }
@@ -84,42 +84,22 @@ library BoardLib {
         uint256 to,
         address sender
     ) internal view {
-        require(
-            self.proposals[to].initialized,
-            "573"
-        );
-        require(
-            self.proposals[to].creator != sender,
-            "574"
-        );
-        require(to > 0, "575");
-        require(to <= self.lastIndex, "576");
+        require(self.proposals[to].initialized, "573");
+        require(self.proposals[to].creator != sender, "574");
+        require(self.proposals[to].status == Status.STARTED, "578");
         require(
             self.proposals[to].atBlock + self.expiryTime > block.number,
             "577"
         );
 
-        require(
-            self.proposals[to].status == Status.STARTED,
-            "578"
-        );
-        require(
-            self.votedAlready[to][sender] == false,
-            "579"
-        );
+        require(self.votedAlready[to][sender] == false, "579");
     }
 
     function closeVoting(BoardState storage self, uint256 index) external {
         require(index > 0, "580");
         require(index <= self.lastIndex, "581");
-        require(
-            self.proposals[index].initialized,
-            "582"
-        );
-        require(
-            self.proposals[index].status == Status.STARTED,
-            "583"
-        );
+        require(self.proposals[index].initialized, "582");
+        require(self.proposals[index].status == Status.STARTED, "583");
         require(
             self.proposals[index].atBlock + self.expiryTime < block.number,
             "584"

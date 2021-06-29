@@ -58,10 +58,7 @@ library WorkSpaceLib {
         address _factoryAddress
     ) external {
         require(_manager != address(0), "504");
-        require(
-            _fee <= 4000 && _fee > 0,
-            "552"
-        );
+        require(_fee <= 4000 && _fee > 0, "552");
         self.fee = _fee;
         self.metadataUrl = _metadataUrl;
         self.managerAddress = payable(_manager);
@@ -82,7 +79,8 @@ library WorkSpaceLib {
         if (self.requireInvite) {
             // if the registration required invite, I check the token validity
             require(
-                checkInviteTokenValidity(self.inviteTokenHash, inviteToken)
+                checkInviteTokenValidity(self.inviteTokenHash, inviteToken),
+                "587"
             );
         }
         require(
@@ -115,7 +113,8 @@ library WorkSpaceLib {
         require(clientAddress != address(0), "515");
         if (self.requireInvite) {
             require(
-                checkInviteTokenValidity(self.inviteTokenHash, inviteToken)
+                checkInviteTokenValidity(self.inviteTokenHash, inviteToken),
+                "587"
             );
         }
         require(
@@ -171,7 +170,7 @@ library WorkSpaceLib {
         bytes32 role,
         address sender
     ) external {
-        require(contractExists(to),"551");
+        require(contractExists(to), "551");
         Job job = Job(payable(to));
         if (role == RoleLib.CLIENT_ROLE) {
             require(job.getClient() == sender);
@@ -187,10 +186,7 @@ library WorkSpaceLib {
 
     // The manager can set the fee anytime
     function setFee(WorkSpaceState storage self, uint16 _fee) external {
-        require(
-            _fee <= 4000 && _fee > 0,
-            "552"
-        );
+        require(_fee <= 4000 && _fee > 0, "552");
         self.fee = _fee;
     }
 
@@ -278,9 +274,7 @@ library WorkSpaceLib {
         address sender,
         address clientAddress
     ) external view {
-        //TODO: zero addresses are not tested
-        require(sender != address(0),"500");
-        require(clientAddress != address(0),"500");
+        require(clientAddress != address(0), "500");
 
         if (self.managerAddress != sender) {
             // If it's not the manager sending this transaction then the address has to be the sender
@@ -289,8 +283,7 @@ library WorkSpaceLib {
         }
 
         require(self.registrationOpen, "517");
-       
-        require(self.clients[sender].initialized == false, "518");
+
     }
 
     function verifyRegisterWorker(
@@ -298,31 +291,26 @@ library WorkSpaceLib {
         address sender,
         address workerAddress
     ) external view {
-        //TODO: Zero address errors are not tested
-        require(sender != address(0),"500");
-        require(workerAddress != address(0),"500");
-        
+        require(workerAddress != address(0), "500");
+
         if (self.managerAddress != sender) {
             require(workerAddress == sender, "549");
         }
-        //TODO THIS IS NOT TESTED :
-         require(self.registrationOpen, "513");
-        
-        //NOT TESTED:
-        require(self.workers[sender].initialized == false, "514");
+        require(self.registrationOpen, "513");
     }
 
-    function verifyCreateJob(WorkSpaceState storage self,address client) external view {
-       //TODO: MAYBE THESE ARE NOT TESTED,COMMENTING THEM DONT CAUSE TEST ERRORS
+    function verifyCreateJob(WorkSpaceState storage self, address client)
+        external
+        view
+    {
+        require(client != address(0),"500");
+        //The manager could try to add a job to a client who is not initialized
         require(self.clients[client].initialized == true, "507");
         require(self.clients[client].disabled == false, "508");
-            //TODO: maybe if the manager creates the jobs only, that is better ux
-
-    
     }
 
-    function contractExists(address _contract) internal view returns (bool){
-        uint size;
+    function contractExists(address _contract) internal view returns (bool) {
+        uint256 size;
         assembly {
             size := extcodesize(_contract)
         }

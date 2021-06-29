@@ -60,7 +60,6 @@ contract WorkSpace is
         if (hasRole(RoleLib.CLIENT_ROLE, msg.sender)) {
             require(client == msg.sender, "558");
         }
-
         state.verifyCreateJob(client);
         Job job = Job(
             payable(
@@ -112,8 +111,8 @@ contract WorkSpace is
         string calldata inviteToken,
         bytes32 _writtenContractHash
     ) external returns (Worker memory) {
-        //TODO: require is not tested properly
         require(hasRole(RoleLib.MANAGER_ROLE, workerAddress) == false, "512");
+        
         state.verifyRegisterWorker(msg.sender, workerAddress);
         state.registerWorker(
             _metadataUrl,
@@ -131,7 +130,6 @@ contract WorkSpace is
         string calldata inviteToken,
         bytes32 _writtenContractHash
     ) external returns (Client memory) {
-        //TODO: bellow reqire doesnt throw if commented out
         require(hasRole(RoleLib.MANAGER_ROLE, clientAddress) == false, "516");
         state.verifyRegisterClient(msg.sender, clientAddress);
         state.registerClient(

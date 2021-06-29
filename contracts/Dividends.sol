@@ -47,17 +47,18 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     }
 
     function claimDividends(uint256 amount) external nonReentrant {
+        require(_token.balanceOf(msg.sender) >= amount, "564");
         state.setManagedTokens(amount, Change.Add);
         _processRequest(amount, msg.sender);
     }
 
     function _processRequest(uint256 amount, address sender) internal {
-        require(_token.balanceOf(sender) >= amount, "564");
         state.setNewBalance(sender, amount);
         uint256 payment = calculateDividends(amount);
+        require(payment > 0,"588");
+        state.setCurrentBalance(payment, Change.Withdraw);
         _token.safeTransferFrom(sender, address(this), amount);
         Address.sendValue(payable(sender), payment);
-        state.setCurrentBalance(payment, Change.Withdraw);
         emit Claim(sender, payment, amount);
     }
 

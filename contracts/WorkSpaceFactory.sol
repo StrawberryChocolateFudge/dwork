@@ -23,8 +23,6 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
         string metadata
     );
 
-    event CreateWorkSpaceFailed(address sender);
-
     event FallbackTriggered(address sender);
 
     event JobLibraryVersion(uint256);
@@ -56,29 +54,22 @@ contract WorkSpaceFactory is AccessControl, CloneFactory, Multicall, Ownable {
             createClone(state.workSpaceLibraryAddress)
         );
 
-        try
-            workSpace.initialize(
-                _fee,
-                _metadata,
-                msg.sender,
-                state.workSpaceLibraryVersion
-            )
-        {
-            state.currentIndex[msg.sender] += 1;
-            index = state.currentIndex[msg.sender];
-            state.workSpaces[msg.sender][index] = address(workSpace);
-            state.amountOfWorkSpaces++;
-            _setupRole(RoleLib.WORKSPACE, address(workSpace));
-            emit WorkSpaceCreated(
-                msg.sender,
-                state.workSpaces[msg.sender][index],
-                _metadata
-            );
-        } catch {
-            // I will release the lock if that call fails and returns a revert, in case it doesn't continue
-            emit CreateWorkSpaceFailed(msg.sender);
-            createLocks[msg.sender] = false;
-        }
+        workSpace.initialize(
+            _fee,
+            _metadata,
+            msg.sender,
+            state.workSpaceLibraryVersion
+        );
+        state.currentIndex[msg.sender] += 1;
+        index = state.currentIndex[msg.sender];
+        state.workSpaces[msg.sender][index] = address(workSpace);
+        state.amountOfWorkSpaces++;
+        _setupRole(RoleLib.WORKSPACE, address(workSpace));
+        emit WorkSpaceCreated(
+            msg.sender,
+            state.workSpaces[msg.sender][index],
+            _metadata
+        );
 
         createLocks[msg.sender] = false;
 

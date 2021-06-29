@@ -50,7 +50,6 @@ library DividendsLib {
         });
     }
 
-   
     function setCurrentBalance(
         DividendsState storage self,
         uint256 balance,
@@ -71,8 +70,6 @@ library DividendsLib {
         address sender,
         uint256 cycle
     ) internal view returns (bool) {
-        require(index > 0, "565");
-        require(index <= self.indexes[sender], "566");
         // If the balance was deposited 1 million blocks ago, it can be unlocked
         return self.tokenBalances[sender][index].atBlock + cycle < block.number;
     }
@@ -95,15 +92,19 @@ library DividendsLib {
         address sender,
         uint256 _cycle
     ) external view returns (bool, string memory) {
+        if (!(index > 0)) {
+            return (false, "565");
+        }
+        if (!(index <= self.indexes[sender])) {
+            return (false, "566");
+        }
+
         if (!self.tokenBalances[sender][index].initialized) {
             return (false, "567");
         }
 
         if (self.tokenBalances[sender][index].state != BalanceState.Deposited) {
-            return (
-                false,
-                "568"
-            );
+            return (false, "568");
         }
         if (!isUnlocked(self, index, sender, _cycle)) {
             return (false, "569");

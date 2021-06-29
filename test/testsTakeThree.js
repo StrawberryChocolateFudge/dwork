@@ -48,6 +48,14 @@ describe("dwork", async function () {
         parseEther("10")
       );
 
+    //Testint 562 revert
+    await expect(
+      holder1.sendTransaction({
+        to: dworkcrowdsale.address,
+        value: parseEther("0"),
+      })
+    ).to.be.revertedWith("563");
+
     expect(
       utils.formatEther(await dworktoken.balanceOf(holder1.address))
     ).to.equal("10.0");
@@ -128,7 +136,6 @@ describe("dwork", async function () {
     expect(history.balance).to.be.equal(parseEther("10"));
 
     // I expect all withdraw to fail at this point
-    //I cannot expect this because FU
     await expect(
       dividends.connect(holder1).withdrawToken(1)
     ).to.be.revertedWith("569");
@@ -146,6 +153,16 @@ describe("dwork", async function () {
 
     history = await dividends.connect(holder1).getHistory(2);
     expect(history.initialized).to.be.false;
+
+    await expect(
+      dworktoken
+        .connect(holder3)
+        .increaseAllowance(dividends.address, parseEther("0"))
+    ).to.emit(dworktoken, "Approval");
+
+    await expect(
+      dividends.connect(holder3).claimDividends(parseEther("0"))
+    ).to.be.revertedWith("588");
   });
 
   it("dividends with reinvest", async function () {
@@ -185,6 +202,14 @@ describe("dwork", async function () {
     await expect(
       dividends.connect(holder1).reclaimDividends(1)
     ).to.be.revertedWith("569");
+    //565 error
+    await expect(
+      dividends.connect(holder1).reclaimDividends(0)
+    ).to.be.revertedWith("565");
+    //Error 566
+    await expect(
+      dividends.connect(holder1).reclaimDividends(2)
+    ).to.be.revertedWith("566");
 
     await mineBlocks(100).then(async () => {
       //After a hundred blocks, the reclaim should work
@@ -196,6 +221,9 @@ describe("dwork", async function () {
           parseEther("0.0003329998891110"),
           parseEther("10")
         );
+      await expect(
+        dividends.connect(holder1).reclaimDividends(1)
+      ).to.be.revertedWith("568");
     });
 
     let history = await dividends.connect(holder1).getHistory(1);
@@ -265,26 +293,44 @@ describe("dwork", async function () {
     expect(await dworktoken.balanceOf(holder2.address)).to.equal(
       parseEther("100")
     );
-    //I try to create a proposal now, topic 2 is fee change
-    // await expect(board.connect(holder2).createProposal(232)).to.be.revertedWith(
-    //   "Must have enough shares"
-    // );
+
     //THIS IS A FEE CHANGE PROPOSAL
     await expect(board.connect(holder1).createProposal(353))
       .to.emit(board, "ProposalCreated")
       .withArgs(holder1.address, 353);
 
+    //error 521
+    await expect(
+      board.connect(holder1).createProposal(2000)
+    ).to.be.revertedWith("521");
+    // /error 570
+    await expect(board.connect(holder3).createProposal(300)).to.be.revertedWith(
+      "570"
+    );
+    //error 571
     expect(await board.getLastProposalIndex()).to.equal(1);
-
+    await expect(board.connect(holder1).createProposal(353)).to.be.revertedWith(
+      "571"
+    );
     // // NOW I WILL VOTE ON THE PROPOSAL
     await expect(board.connect(holder1).vote(4, true)).to.be.revertedWith(
       "573"
     );
-    await expect(board.connect(holder1).vote(1, true)).to.be.reverted;
+    //error 574
+    await expect(board.connect(holder1).vote(1, true)).to.be.revertedWith(
+      "574"
+    );
 
     await expect(board.connect(holder2).vote(1, true))
       .to.emit(board, "Vote")
-      .withArgs(holder2.address, 1, true, parseEther("100"));
+      .withArgs(holder2.address, 1, true, parseEther("100"))
+      .then(async () => {
+        //error 579
+
+        await expect(board.connect(holder2).vote(1, true)).to.be.revertedWith(
+          "579"
+        );
+      });
 
     await expect(board.connect(holder3).vote(1, true))
       .to.emit(board, "Vote")
@@ -298,16 +344,35 @@ describe("dwork", async function () {
 
     expect(utils.formatEther(votes[0])).to.be.equal("10110.0");
     expect(utils.formatEther(votes[1])).to.be.equal("0.0");
-    await expect(board.closeVoting(1)).to.be.revertedWith(
-      "584"
-    );
+    await expect(board.closeVoting(1)).to.be.revertedWith("584");
     // //NOW I CAN MINE
     await mineBlocks(120).then(async () => {
       //Anyone can close voting
 
+      //ERROR 577
+      await expect(board.connect(holder6).vote(1, true)).to.be.revertedWith(
+        "577"
+      );
+
+      //Error 580
+
+      await expect(board.closeVoting(0)).to.be.revertedWith("580");
+      //error 581
+      await expect(board.closeVoting(43)).to.be.revertedWith("581");
+
       await expect(board.closeVoting(1))
         .to.emit(board, "VotingClosed")
-        .withArgs(1, true);
+        .withArgs(1, true)
+        .then(async () => {
+          await expect(board.closeVoting(1)).to.be.revertedWith("583");
+        });
+
+      //error 578
+      //since voting is closed, this other error occurs first over 577
+      await expect(board.connect(holder6).vote(1, true)).to.be.revertedWith(
+        "578"
+      );
+
       //the second passes
       //And this will change the fee of the workspace factory!!
       expect(await workspacefactory.getContractFee()).to.be.equal(100);
@@ -318,10 +383,6 @@ describe("dwork", async function () {
       expect(await workspacefactory.getContractFee()).to.be.equal(353);
     });
   });
-
-  // it("retesting all requires", async () => {
-  //   throw "error";
-  // });
 });
 
 async function mineBlocks(blockNumber) {

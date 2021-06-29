@@ -31,7 +31,6 @@ Errors
 517 : Registration is not open
 518 : The client already signed up
 519 : Function is in use, try again
-520 : Fee cannot be more than 100
 521 : Fee cannot be higher than 1000
 522 : Disabled client cannot add worker 
 523 : The caller is not the workspace
@@ -98,3 +97,6 @@ Errors
 583 : The proposal already closed
 584 : The proposal didnt expire,yet
 585 : In use. Try again
+586 : The id cannot be smaller than one
+587 : Invite token is required
+588 : Payment must be bigger than 0

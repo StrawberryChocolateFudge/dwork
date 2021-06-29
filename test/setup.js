@@ -252,11 +252,17 @@ async function expectRevert(async_callback, errString) {
     throws = true;
     err = e.message;
   }
+
+  if(!throws){
+    throw `ErrorCode ${errString}` 
+  }
+  if(!err.includes(errString)){
+        console.warn(err);
+    throw `ErrorCode ${errString} is not in the error`
+  }
   return {
     throws,
-    correct: err.includes(
-      `VM Exception while processing transaction: reverted with reason string '${errString}'`
-    ),
+    correct: err.includes(errString),
   };
 }
 

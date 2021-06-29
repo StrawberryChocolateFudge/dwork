@@ -1,10 +1,15 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { setUp, addLibrariesAndWorkspace, setUpJobTests } = require("./setup");
-
+const {
+  setUp,
+  addLibrariesAndWorkspace,
+  setUpJobTests,
+  expectRevert,
+} = require("./setup");
+console.log("BLOODY HARDHAT CANNOT GENERATE STACK TRACE FOR DEEP REVERTS");
 describe("factory and workspace tests", async function () {
   it("Failing to hack the master contracts", async function () {
-    const { workspacemaster, workspacefactory, jobmaster } = await setUp();
+    const { workspacemaster, jobmaster } = await setUp();
 
     expect(
       workspacemaster.initialize(
@@ -46,6 +51,22 @@ describe("factory and workspace tests", async function () {
 
     let isNew = await workspacefactory.addressIsNew(owner.address);
     expect(isNew).to.be.true;
+
+    await expect(
+      workspacefactory.createWorkSpace(5000, "Meta")
+    ).to.be.revertedWith("552");
+
+    await expect(workspacefactory.setDisabled(true));
+
+    //  // ERROR 501
+    await workspacefactory.setDisabled(true).then(async () => {
+      await expect(
+        workspacefactory.createWorkSpace(1, "Meta")
+      ).to.be.revertedWith("501");
+    });
+
+    await workspacefactory.setDisabled(false);
+
     await workspacefactory.createWorkSpace(1, "This is the metadata");
     let isNewAgain = await workspacefactory.addressIsNew(owner.address);
     expect(isNewAgain).to.be.false;
@@ -69,7 +90,10 @@ describe("factory and workspace tests", async function () {
 
     expect(workspacefactory.connect(holder1).setDisabled(true)).to.be.reverted;
     expect(workspacefactory.connect(holder1).setContractFee(1)).to.be.reverted;
+    // ERROR 557
+    await expectRevert(() => workspacefactory.setContractFee(13), "557");
 
+    //FOR TESTING ERROR 521
     expect(workspacefactory.setContractFee(1230)).to.be.revertedWith("521");
     //set CONTRACT FEE NOW IS ONLY CALLABLE BY THE BOARD!
   });
@@ -161,8 +185,14 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Roles and registration", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner } =
-      await setUp();
+    const {
+      workspacefactory,
+      workspacemaster,
+      jobmaster,
+      owner,
+      holder1,
+      holder2,
+    } = await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
@@ -190,7 +220,6 @@ describe("factory and workspace tests", async function () {
     // Registering as a client or worker should fail since invite is required but none is set
     // The manager signes up external accounts here
     let clientRegisterFailed = false;
-
     expect(
       workspace.registerClient(
         "metadataurl",
@@ -198,7 +227,7 @@ describe("factory and workspace tests", async function () {
         "",
         mockContractHash
       )
-    ).to.be.reverted;
+    ).to.be.revertedWith("587");
 
     expect(
       workspace.registerWorker(
@@ -207,7 +236,7 @@ describe("factory and workspace tests", async function () {
         "",
         mockContractHash
       )
-    ).to.be.reverted;
+    ).to.be.revertedWith("587");
 
     // Now I set the token hash so I can register with an address
 
@@ -237,7 +266,7 @@ describe("factory and workspace tests", async function () {
         "Hazx123sZ",
         mockContractHash
       )
-    ).to.be.reverted;
+    ).to.be.revertedWith("553");
 
     //Client tries to register twice
 
@@ -248,7 +277,7 @@ describe("factory and workspace tests", async function () {
         "Hazx123sZ",
         mockContractHash
       )
-    ).to.be.reverted;
+    ).to.be.revertedWith("554");
 
     //Turn of invites
 
@@ -256,6 +285,32 @@ describe("factory and workspace tests", async function () {
 
     // registering client again, without invite code and new address
 
+    expect(
+      workspace.registerWorker("meta", owner.address, "", mockContractHash)
+    ).to.be.revertedWith("512");
+    //TESTING 500 error
+    expect(
+      workspace.registerWorker(
+        "metaurl",
+        "0x0000000000000000000000000000000000000000",
+        "",
+        mockContractHash
+      )
+    ).to.be.revertedWith("500");
+
+    //TESTING 549 error
+    expect(
+      workspace
+        .connect(holder1)
+        .registerWorker(
+          "metaurl",
+          "0x2D3aEca8f8a18Cb9E7D067D37eD1D538b4d36e02",
+          "",
+          mockContractHash
+        )
+    ).to.be.revertedWith("549");
+
+    //
     expect(
       workspace.registerWorker(
         "metaurl",
@@ -266,6 +321,7 @@ describe("factory and workspace tests", async function () {
     ).to.emit(workspace, "RegistrationSuccess");
 
     // I try to register twice
+    //553 error
     expect(
       workspace.registerWorker(
         "metaurl",
@@ -273,7 +329,7 @@ describe("factory and workspace tests", async function () {
         "",
         mockContractHash
       )
-    ).to.be.reverted;
+    ).to.be.revertedWith("553");
 
     let addresses = await workspace.getAddresses();
     expect(addresses.length).to.equal(2);
@@ -286,6 +342,68 @@ describe("factory and workspace tests", async function () {
     expect(clientAddresses[0]).to.equal(
       "0x050e8C2DC9454cA53dA9eFDAD6A93bB00C216Ca0"
     );
+
+    // //TESTING 513 error
+    await workspace.setRegistrationOpen(false).then(async () => {
+      await expect(
+        workspace.registerWorker(
+          "metaurl",
+          holder1.address,
+          "",
+          mockContractHash
+        )
+      ).to.be.revertedWith("513");
+      await expect(
+        workspace.registerClient("meta", holder2.address, "", mockContractHash)
+      ).to.be.revertedWith("517");
+      await workspace.setRegistrationOpen(true);
+    });
+
+    // TESTING 514
+    await workspace
+      .connect(holder1)
+      .registerWorker("metaurl", holder1.address, "", mockContractHash)
+      .then(async () => {
+        await expect(
+          workspace
+            .connect(holder1)
+            .registerWorker("metaurl", holder1.address, "", mockContractHash)
+        ).to.be.revertedWith("553");
+      });
+
+    //TESTING 516
+    await expect(
+      workspace.registerClient("meta", owner.address, "", mockContractHash)
+    ).to.be.revertedWith("516");
+
+    //A 500 error for 0 address
+    await expect(
+      workspace.registerClient(
+        "meta",
+        "0x0000000000000000000000000000000000000000",
+        "",
+        mockContractHash
+      )
+    ).to.be.revertedWith("500");
+
+    //The 550 error from verify register client
+    await expect(
+      workspace
+        .connect(holder1)
+        .registerClient("meta", holder2.address, "", mockContractHash)
+    ).to.be.revertedWith("550");
+
+    // The 554 error for registering twice
+    await workspace
+      .connect(holder2)
+      .registerClient("metaurl", holder2.address, "", mockContractHash)
+      .then(async () => {
+        await expect(
+          workspace
+            .connect(holder2)
+            .registerClient("metaurl", holder2.address, "", mockContractHash)
+        ).to.be.revertedWith("554");
+      });
   });
 
   it("Workspace fees", async function () {
@@ -312,6 +430,8 @@ describe("factory and workspace tests", async function () {
     await workspace.setFee(8);
 
     expect(await workspace.fee()).to.equal(8);
+
+    await expect(workspace.setFee(5000)).to.be.revertedWith("552");
   });
 
   it("Moderation", async function () {
@@ -322,6 +442,7 @@ describe("factory and workspace tests", async function () {
       owner,
       worker,
       client,
+      holder1,
     } = await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
@@ -380,6 +501,23 @@ describe("factory and workspace tests", async function () {
     const CLIENT_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("CLIENT_ROLE")
     );
+
+    //A 500 error
+    expect(
+      workspace.moderateTarget(
+        "0x0000000000000000000000000000000000000000",
+        WORKER_ROLE,
+        true
+      )
+    ).to.be.revertedWith("500");
+    //A 555 error
+    expect(
+      workspace.moderateTarget(holder1.address, WORKER_ROLE, true)
+    ).to.be.revertedWith("555");
+    expect(
+      workspace.moderateTarget(holder1.address, CLIENT_ROLE, true)
+    ).to.be.revertedWith("556");
+
     expect(workspace.moderateTarget(worker.address, WORKER_ROLE, true)).to.emit(
       workspace,
       "Moderated"
@@ -428,8 +566,15 @@ describe("factory and workspace tests", async function () {
   });
 
   it("Client creates a job", async function () {
-    const { workspacefactory, workspacemaster, jobmaster, owner, client } =
-      await setUp();
+    const {
+      workspacefactory,
+      workspacemaster,
+      jobmaster,
+      owner,
+      client,
+      holder1,
+      holder2,
+    } = await setUp();
     await addLibrariesAndWorkspace(
       workspacefactory,
       workspacemaster,
@@ -465,9 +610,9 @@ describe("factory and workspace tests", async function () {
       ethers.utils.toUtf8Bytes("CLIENT_ROLE")
     );
     await workspace.moderateTarget(client.address, CLIENT_ROLE, true);
-
-    expect(workspace.connect(client).createJob("This is the metadata")).to.be
-      .reverted;
+    //508 test
+    expect(workspace.connect(client).createJob("This is the metadata",client.address)).to.be
+      .revertedWith("508");
 
     await workspace.moderateTarget(client.address, CLIENT_ROLE, false);
     expect(
@@ -477,6 +622,27 @@ describe("factory and workspace tests", async function () {
     ).to.emit(workspace, "JobCreated");
     const clientJobs = await workspace.clientjobs(client.address);
     expect(clientJobs.length).to.equal(1);
+    //ERROR 509
+    await expect(
+      workspace.connect(holder1).createJob("meta", client.address)
+    ).to.be.revertedWith("509");
+
+    //ERROR 558
+    await expect(
+      workspace.connect(client).createJob("", holder1.address)
+    ).to.be.revertedWith("558");
+
+    //A 500 error for zero address
+    await expect(
+      workspace.createJob("", "0x0000000000000000000000000000000000000000")
+    ).to.be.revertedWith("500");
+
+    // A 507 for trying to adda  job to an unknown address
+    await expect(workspace.createJob("", holder2.address)).to.be.revertedWith(
+      "507"
+    );
+
+
   });
 
   it("Workspace Deprecation checking", async function () {

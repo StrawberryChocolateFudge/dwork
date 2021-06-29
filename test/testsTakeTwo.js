@@ -3,6 +3,28 @@ const { ethers } = require("hardhat");
 const { setUpJobTests } = require("./setup");
 
 describe("Job tests", async function () {
+  it("add worker errors", async function () {
+    const { workspace, clientJobs, worker, client, worker2 } =
+      await setUpJobTests();
+    // Two tests for 500 error
+    await expect(
+      workspace.addWorker(
+        "0x0000000000000000000000000000000000000000",
+        worker.address
+      )
+    ).to.be.revertedWith("500");
+    await expect(
+      workspace.addWorker(
+        clientJobs[0],
+        "0x0000000000000000000000000000000000000000"
+      )
+    ).to.be.revertedWith("500");
+    //509 , throws if role is not client or manager
+    await expect(
+      workspace.connect(worker2).addWorker(clientJobs[0], worker.address)
+    ).to.be.revertedWith("509");
+  });
+
   it("assigning workers to job", async function () {
     const { workspace, clientJobs, worker, client, worker2 } =
       await setUpJobTests();
@@ -28,6 +50,7 @@ describe("Job tests", async function () {
       .to.emit(workspace, "Moderated")
       .withArgs(client.address, CLIENT_ROLE, true);
 
+    //522 error here
     expect(
       workspace.connect(client).addWorker(clientJobs[0], worker2.address)
     ).to.be.revertedWith("522");
@@ -94,7 +117,7 @@ describe("Job tests", async function () {
     //After 1 ether is deposited, the worker can start work
     expect(job.connect(worker).startWork()).to.emit(job, "WorkStarted");
 
-    //testing a require
+    //testing a require ERROR 539
     expect(workspace.addWorker(job.address, worker.address)).to.be.revertedWith(
       "539"
     );
@@ -123,7 +146,17 @@ describe("Job tests", async function () {
 
     //Reverts with insufficient balance
     expect(job.connect(worker).withdraw()).to.be.reverted;
-    //I got too many expects in a block, so I repeat in further tests
+
+    const tx2 = {
+      to: job.address,
+      value: ethers.utils.parseEther("1"),
+    };
+
+    expect(await client.sendTransaction(tx2)).to.changeEtherBalance(
+      client,
+      ethers.utils.parseEther("-1")
+    );
+    expect(job.connect(worker).withdraw()).to.be.revertedWith("529");
   });
 
   it("start with not ready, add worker, finsh assignment, add new worker,revoke role", async () => {
@@ -137,16 +170,44 @@ describe("Job tests", async function () {
     const jobaddress = await workspace.clientjobs(client.address);
     const job = await ethers.getContractAt("Job", jobaddress[0], client);
     // assignment is created with true so the worker can begin work instantly
-    await job.connect(client).addAssignment(false);
-    workspace.addWorker(job.address, worker.address);
+
+    await workspace.addWorker(job.address, worker.address);
+    //Error 525
+    await expect(job.connect(worker).startWork()).to.be.revertedWith("525");
+
+    // Error 526 dispute request too early
+    await expect(job.connect(client).disputeRequest()).to.be.revertedWith(
+      "526"
+    );
+
+    // // error 547
+    await expect(job.connect(manager).resolveDispute(false)).to.be.revertedWith(
+      "547"
+    );
+
+    //error 548
+    await expect(job.connect(client).markAccepted()).to.be.revertedWith("548");
+
     const tx = {
       to: job.address,
       value: ethers.utils.parseEther("1"),
     };
     await client.sendTransaction(tx);
-    expect(job.connect(client).markReady());
+    //ERROR 543, start work on uninitialized assignment
+    await expect(job.connect(worker).startWork()).to.be.revertedWith("543");
+    await job.connect(client).addAssignment(false);
+    await expect(job.connect(worker).startWork()).to.be.revertedWith("544");
 
-    await job.connect(worker).startWork();
+    expect(job.connect(client).markReady());
+    expect(job.connect(worker).markDone()).to.be.revertedWith("546");
+    await job
+      .connect(worker)
+      .startWork()
+      .then(async () => {
+        //545 error
+        await expect(job.connect(worker).startWork()).to.be.revertedWith("545");
+      });
+
     expect(job.connect(worker).markDone()).to.emit(job, "WorkDone");
     expect(job.connect(client).markAccepted()).to.emit(
       job,
@@ -194,8 +255,20 @@ describe("Job tests", async function () {
     } = await setUpJobTests();
     const jobaddress = await workspace.clientjobs(client.address);
     const job = await ethers.getContractAt("Job", jobaddress[0], client);
+
+    //541 error. trying to mark it ready before its initialized
+    await expect(job.connect(client).markReady()).to.be.revertedWith("541");
+
     // assignment is created with true so the worker can begin work instantly
     await job.connect(client).addAssignment(false);
+
+    //Testing 540 error
+    await expect(job.connect(client).addAssignment(false)).to.be.revertedWith(
+      "540"
+    );
+    //536 ERROR
+    await expect(job.connect(client).refund()).to.be.revertedWith("536");
+
     expect(job.connect(client).disputeRequest()).to.be.revertedWith("526");
     workspace.addWorker(job.address, worker.address);
     const tx = {
@@ -283,19 +356,15 @@ describe("Job tests", async function () {
     await job.connect(client).markReady();
     expect(job.connect(worker2).startWork()).to.emit(job, "WorkStarted");
     expect(job.connect(worker2).markDone()).to.emit(job, "WorkDone");
+    //530 error, the assignment is not accepted
+    await expect(job.connect(worker2).withdraw()).be.revertedWith("530");
+
     expect(job.connect(client).markAccepted()).to.emit(
       job,
       "AssignmentAccepted"
     );
-    expect(job.connect(worker).withdraw()).to.be.reverted;
-    expect(job.connect(worker2).withdraw())
-      .to.emit(job, "Withdraw")
-      .withArgs(
-        2,
-        ethers.utils.parseEther("0.79"),
-        ethers.utils.parseEther("0.2"),
-        ethers.utils.parseEther("0.01")
-      );
+    //Error 509
+    expect(job.connect(worker).withdraw()).to.be.revertedWith("509");
   });
 
   it("selfdestruct job", async function () {
@@ -327,14 +396,32 @@ describe("Job tests", async function () {
     );
   });
 
-  it("Job deprecation checking", async function () {
+   it("selfdestruct job error test", async function () {
+    //This is the self destruct scenario,
     const {
       workspace,
-      clientJobs,
       worker,
       client,
-      workspacefactory
+      owner: manager,
+      worker2,
     } = await setUpJobTests();
+    const jobaddress = await workspace.clientjobs(client.address);
+    const job = await ethers.getContractAt("Job", jobaddress[0], client);
+    //self destruct can be called on all non-ready assignments!
+    await job.connect(client).addAssignment(true);
+    const tx = {
+      to: job.address,
+      value: ethers.utils.parseEther("1"),
+    };
+    await client.sendTransaction(tx);
+
+    await expect(job.kill()).to.be.revertedWith("538");
+  });
+
+
+  it("Job deprecation checking", async function () {
+    const { workspace, clientJobs, worker, client, workspacefactory } =
+      await setUpJobTests();
     let jobaddress = await workspace.clientjobs(client.address);
     const job = await ethers.getContractAt("Job", jobaddress[0], client);
     const jobLibVersion = await workspacefactory.getCurrentJobLibraryVersion();
@@ -343,8 +430,7 @@ describe("Job tests", async function () {
 
     //I can get the versions like above
     // and to trigger deprecation warning, I just set the lib address to something
-    await workspacefactory
-       .setJobLibraryAddress(worker.address);
+    await workspacefactory.setJobLibraryAddress(worker.address);
     const jobLibVersionAgain =
       await workspacefactory.getCurrentJobLibraryVersion();
     const jobInstanceVersionAgain = await job.getVersion();
