@@ -16,9 +16,9 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
     using DividendsLib for DividendsState;
 
     event Received(address sender, uint256 value);
-    event Claim(address sender, uint256 value, uint256 with);
+    event Claim(address sender, uint256 value, uint256 tokens);
     event TokenWithdraw(address recepient, uint256 value, uint256 index);
-    event Reclaim(address claimer, uint256 value, uint256 with);
+    event Reclaim(address claimer, uint256 value, uint256 tokens);
     DividendsState private state;
     IERC20 private _token;
     //one cycle has 1 million blocks, after 1 million blocks the tokens can be redeemed or reinvested
@@ -35,7 +35,6 @@ contract Dividends is Initializable, ReentrancyGuard, Ownable {
         _cycle = cycle_;
         lock = 0;
     }
-
 
     receive() external payable {
         //The dividends is  ether, sent by Job contracts as fee

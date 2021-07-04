@@ -11,8 +11,6 @@ import "./libraries/RoleLib.sol";
 import "./libraries/JobLib.sol";
 import "./interfaces/IJob.sol";
 
-// import "hardhat/console.sol";
-
 // The job contains the description of the job and works as a refundable escrow.
 // The payment is either refounded or split
 
