@@ -6,7 +6,7 @@ const {
   setUpJobTests,
   expectRevert,
 } = require("./setup");
-console.log("BLOODY HARDHAT CANNOT GENERATE STACK TRACE FOR DEEP REVERTS");
+console.log("BLEEDING EDGE, Hardhat not compatible,yet fully with sol 0.8.6");
 describe("factory and workspace tests", async function () {
   it("Failing to hack the master contracts", async function () {
     const { workspacemaster, jobmaster } = await setUp();
