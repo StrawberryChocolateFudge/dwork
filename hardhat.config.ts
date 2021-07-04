@@ -1,9 +1,11 @@
-import "@nomiclabs/hardhat-waffle";
 import "hardhat-contract-sizer";
 import "hardhat-gas-reporter";
-import "@nomiclabs/hardhat-solhint";
-import { task } from "hardhat/config";
 import "@nomiclabs/hardhat-waffle";
+import '@nomiclabs/hardhat-ethers'
+import "@nomiclabs/hardhat-solhint";
+// import "@typechain/hardhat";
+import { task } from "hardhat/config";
+
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (args,hre) => {
@@ -24,22 +26,22 @@ module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.8.0"//,
-        // settings:{
-        //   optimizer:{
-        //     enabled: true,
-        //     runs:1000
-        //   }
-        // }
+        version: "0.8.0",
+        settings:{
+          optimizer:{
+            enabled: true,
+            runs:1000
+          }
+        }
       },
       {
-        version: "0.8.6"//,
-        //  settings:{
-        //   optimizer:{
-        //     enabled: true,
-        //     runs:1000
-        //   }
-        // }
+        version: "0.8.6",
+         settings:{
+          optimizer:{
+            enabled: true,
+            runs:1000
+          }
+        }
       },
     ],
   },
@@ -52,5 +54,9 @@ module.exports = {
     currency: 'CHF',
     gasPrice: 21,
     enabled : true
+  },
+  typechain : {
+    outDir: "types",
+    target: "ethers-v5"
   }
 };
