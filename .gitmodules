@@ -1,0 +1,3 @@
+[submodule "worklinks.eth"]
+	path = worklinks.eth
+	url = https://gitlab.com/restapi.solutions/worklinks.eth.git
