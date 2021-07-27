@@ -35,6 +35,7 @@
     "test": "hardhat test",
     "size": "hardhat size-contracts",
     "check": "hardhat check",
-    "deploy-stage": "node scripts/deploy.js"
+    "node": "hardhat node",
+    "deploy-stage": "hardhat run --network localhost scripts/deploy.ts"
   }
 }
