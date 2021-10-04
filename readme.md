@@ -35,8 +35,8 @@ run script to deploy to local network:
 `npx hardhat run --network localhost scripts/deploy.ts`
 
 
-## DEPLOYED ON TESTNET
-
+## DEPLOYED ON HARMONY ONE TESTNET
+#### https://api.s0.b.hmny.io
      ·---------------------------|-------------·
      |  Contract Name            ·  Size (Kb)  │
      ····························|··············
