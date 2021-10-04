@@ -20,7 +20,7 @@ The manager of the workspace can match workers to a client, help the client find
 and deploy job contracts which functions as an escrow. The worker can finish a job and claim rewards deposited by the client
 or the client may request dispute resolution and the manager can decide to refund him.
 
-The project uses the DWORK token, a token solf via a crowdsale contract.
+The project uses the DWORK token, a token sold via a crowdsale contract.
 DWORK is used to collect dividends, fees collected from Jobs and becomes part of the board 
 and may vote on how much fees they should collect in future deployed job escrow contracts.
 
