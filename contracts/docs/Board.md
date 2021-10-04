@@ -5,6 +5,16 @@
 The Board is for voting. The DWORK token holders can propose the fees that will be used in future job escrows.
 The board does an importand work and may have influence on the token pricing.
 
+## Events
+`event ProposalCreated(address creator, uint256 proposedFee);`
+
+`event Vote(address voter, uint256 to, bool ticket, uint256 weight);`
+
+`event VotingClosed(uint256 proposal, bool accepted);`
+
+`event ProposalFulfilled(uint256 proposal);`
+
+
 ## Public API
 `createProposal(uint16 setFeeTo) external`
 

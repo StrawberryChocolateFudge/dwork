@@ -7,10 +7,15 @@ The workspace factory contract is used to safely deploy `workspace` and `job` sm
 ## Events
 
 `event WorkSpaceCreated( address creator, address contractAddress, string metadata );`
+
 `event FallbackTriggered(address sender);`
+
 `event JobLibraryVersion(uint256);`
+
 `event WorkSpaceLibraryVersion(uint256);`
+
 `event DividendsLibraryVersion(uint256);`
+
 `event ContractFeeChange(uint16);`
 
 ## Public Api

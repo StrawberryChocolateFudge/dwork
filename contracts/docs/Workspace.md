@@ -7,6 +7,18 @@ This is a Recruiter based freelance work platform.
 
 The creator of the contract is the manager.
 
+## Events
+`event RegistrationSuccess(bytes32 role, address registeredAddress);`
+
+`event Moderated(address, bytes32, bool);`
+
+`event JobCreated(address);`
+
+`event FallbackTriggered(address);`
+
+`event AddedWorker(address to, address worker);`
+
+
 ## Public Api
 
 
@@ -161,13 +173,6 @@ get the version of the current workspace contract
 `getAddresses() external view returns (address[] memory, address[] memory)`
 
 Gets all the addresses of workers and clients, returned in the order of (self.workerAddresses, self.clientAddresses)
-
-## Events
-`event RegistrationSuccess(bytes32 role, address registeredAddress);`
-`event Moderated(address, bytes32, bool);`
-`event JobCreated(address);`
-`event FallbackTriggered(address);`
-`event AddedWorker(address to, address worker);`
 
 
 

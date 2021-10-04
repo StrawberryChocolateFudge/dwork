@@ -6,8 +6,11 @@ The Dividends contract allows DWORK token holders to claim fees collected from J
 
 ## Events
 `event Received(address sender, uint256 value);`
+
 `event Claim(address sender, uint256 value, uint256 tokens);`
+
 `event TokenWithdraw(address recepient, uint256 value, uint256 index);`
+
 `event Reclaim(address claimer, uint256 value, uint256 tokens);`
 
 ## Public API
