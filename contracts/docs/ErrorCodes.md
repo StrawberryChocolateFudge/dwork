@@ -1,3 +1,6 @@
+ERRORS AND EVENT CODES EMITTED BY THE APPLICATION
+
+
 
 Events
 100 : The address was saved
